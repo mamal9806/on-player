@@ -11,10 +11,13 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,18 +25,28 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.MediaItem
@@ -42,120 +55,526 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import com.onplayer.app.data.MediaFile
 
-private data class TrackArtwork(val bitmap:Bitmap?,val title:String,val artist:String,val album:String)
+private data class TrackArtwork(val bitmap: Bitmap?, val title: String, val artist: String, val album: String)
 
 @Composable
-private fun rememberTrackArtwork(file:MediaFile):TrackArtwork {
-    val context=LocalContext.current
-    val initial=TrackArtwork(null,file.displayTitle,file.displayArtist,file.displayAlbum)
-    val data by produceState(initial,file.uri) {
-        value=withContext(Dispatchers.IO) {
-            val retriever=MediaMetadataRetriever()
+private fun rememberTrackArtwork(file: MediaFile): TrackArtwork {
+    val context = LocalContext.current
+    val initial = TrackArtwork(null, file.displayTitle, file.displayArtist, file.displayAlbum)
+    val data by produceState(initial, file.uri) {
+        value = withContext(Dispatchers.IO) {
+            val retriever = MediaMetadataRetriever()
             try {
-                retriever.setDataSource(context,file.uri)
-                val title=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)?.takeIf{it.isNotBlank()&&it!="<unknown>"} ?: file.displayTitle
-                val artist=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)?.takeIf{it.isNotBlank()&&it!="<unknown>"} ?: file.displayArtist
-                val album=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)?.takeIf{it.isNotBlank()&&it!="<unknown>"} ?: file.displayAlbum
-                val bitmap=retriever.embeddedPicture?.let{bytes->BitmapFactory.decodeByteArray(bytes,0,bytes.size)}
-                TrackArtwork(bitmap,title,artist,album)
-            }catch(_:Exception){initial}finally{try{retriever.release()}catch(_:Exception){}}
+                retriever.setDataSource(context, file.uri)
+                val title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
+                    ?.takeIf { it.isNotBlank() && it != "<unknown>" } ?: file.displayTitle
+                val artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
+                    ?.takeIf { it.isNotBlank() && it != "<unknown>" } ?: file.displayArtist
+                val album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)
+                    ?.takeIf { it.isNotBlank() && it != "<unknown>" } ?: file.displayAlbum
+                val bitmap = retriever.embeddedPicture?.let { bytes ->
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                }
+                TrackArtwork(bitmap, title, artist, album)
+            } catch (_: Exception) {
+                initial
+            } finally {
+                try { retriever.release() } catch (_: Exception) {}
+            }
         }
     }
     return data
 }
 
 @Composable
-fun PlayerScreen(file:MediaFile?,files:List<MediaFile>,vm:OnPlayerViewModel,player:MediaController?,onBack:()->Unit) {
-    val fg=Color.White
-    val muted=Color(0xFFB6B2C8)
-    val purple=Color(0xFFB18AFF)
-    if(file==null) {
-        Box(Modifier.fillMaxSize().background(Color(0xFF090A12)),contentAlignment=Alignment.Center) {
-            Column(horizontalAlignment=Alignment.CenterHorizontally) { Icon(Icons.Default.MusicNote,contentDescription=null,tint=purple,modifier=Modifier.size(58.dp)); Text("Choose a song",color=fg,modifier=Modifier.padding(top=12.dp)); TextButton(onClick=onBack){Text("Back")} }
+fun PlayerScreen(
+    file: MediaFile?,
+    files: List<MediaFile>,
+    vm: OnPlayerViewModel,
+    player: MediaController?,
+    onBack: () -> Unit
+) {
+    val foreground = Color.White
+    val secondary = Color(0xFFD1C9E4)
+    val accent = Color(0xFFD6B8FF)
+
+    if (file == null) {
+        Box(
+            Modifier.fillMaxSize().background(Color(0xFF090A12)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Default.MusicNote, contentDescription = null, tint = accent, modifier = Modifier.size(58.dp))
+                Text("Choose a song", color = foreground, modifier = Modifier.padding(top = 12.dp))
+                TextButton(onClick = onBack) { Text("Back") }
+            }
         }
         return
     }
-    if(player==null) {
-        Box(Modifier.fillMaxSize().background(Color(0xFF090A12)),contentAlignment=Alignment.Center){CircularProgressIndicator(color=purple)}
+    if (player == null) {
+        Box(Modifier.fillMaxSize().background(Color(0xFF090A12)), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = accent)
+        }
         return
     }
-    val art=rememberTrackArtwork(file)
-    val queue=remember(files,file.uri){(files.filter{it.isPlayable}.let{list->if(list.any{it.uri==file.uri})list else listOf(file)+list})}
-    var playing by remember{mutableStateOf(player.isPlaying)}
-    var position by remember{mutableLongStateOf(0L)}
-    var duration by remember{mutableLongStateOf(0L)}
-    var shuffle by remember{mutableStateOf(player.shuffleModeEnabled)}
-    var repeatOne by remember{mutableStateOf(player.repeatMode==Player.REPEAT_MODE_ONE)}
-    val pulse=rememberInfiniteTransition(label="artwork pulse").animateFloat(initialValue=1f,targetValue=1.025f,animationSpec=infiniteRepeatable(tween(2200),RepeatMode.Reverse),label="art scale").value
+
+    val artwork = rememberTrackArtwork(file)
+    val queue = remember(files, file.uri) {
+        files.filter { it.isPlayable }.let { playable ->
+            if (playable.any { it.uri == file.uri }) playable else listOf(file) + playable
+        }
+    }
+    var playing by remember { mutableStateOf(player.isPlaying) }
+    var position by remember { mutableLongStateOf(0L) }
+    var duration by remember { mutableLongStateOf(0L) }
+    var shuffle by remember { mutableStateOf(player.shuffleModeEnabled) }
+    var repeatOne by remember { mutableStateOf(player.repeatMode == Player.REPEAT_MODE_ONE) }
+    val pulse = rememberInfiniteTransition(label = "album glass pulse")
+        .animateFloat(
+            initialValue = 1f,
+            targetValue = 1.018f,
+            animationSpec = infiniteRepeatable(tween(2600), RepeatMode.Reverse),
+            label = "album scale"
+        ).value
+
     DisposableEffect(player) {
-        val listener=object:Player.Listener {
-            override fun onIsPlayingChanged(isPlaying:Boolean){playing=isPlaying}
-            override fun onMediaItemTransition(mediaItem:MediaItem?,reason:Int){position=0L;duration=player.duration.coerceAtLeast(0L)}
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                position = 0L
+                duration = player.duration.coerceAtLeast(0L)
+            }
         }
         player.addListener(listener)
-        onDispose{player.removeListener(listener)}
+        onDispose { player.removeListener(listener) }
     }
-    LaunchedEffect(player,file.uri,queue) {
-        if(player.currentMediaItem?.localConfiguration?.uri!=file.uri) {
-            val items=queue.map{song->MediaItem.Builder().setUri(song.uri).setMediaMetadata(MediaMetadata.Builder().setTitle(song.displayTitle).setArtist(song.displayArtist).setAlbumTitle(song.displayAlbum).build()).build()}
-            player.setMediaItems(items,queue.indexOfFirst{it.uri==file.uri}.coerceAtLeast(0),0L)
+
+    LaunchedEffect(player, file.uri, queue) {
+        if (player.currentMediaItem?.localConfiguration?.uri != file.uri) {
+            val items = queue.map { song ->
+                MediaItem.Builder()
+                    .setUri(song.uri)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(song.displayTitle)
+                            .setArtist(song.displayArtist)
+                            .setAlbumTitle(song.displayAlbum)
+                            .build()
+                    )
+                    .build()
+            }
+            player.setMediaItems(items, queue.indexOfFirst { it.uri == file.uri }.coerceAtLeast(0), 0L)
             player.prepare()
             player.play()
         } else {
+            // ExoPlayer requests permanent music audio focus before output begins.
             player.play()
         }
     }
-    LaunchedEffect(player,playing) {
-        while(playing) {
-            position=player.currentPosition.coerceAtLeast(0L)
-            duration=player.duration.takeIf{it>0L}?:0L
-            delay(450)
+
+    LaunchedEffect(player, playing) {
+        while (playing) {
+            position = player.currentPosition.coerceAtLeast(0L)
+            duration = player.duration.takeIf { it > 0L } ?: 0L
+            delay(350)
         }
-        position=player.currentPosition.coerceAtLeast(0L)
-        duration=player.duration.takeIf{it>0L}?:0L
+        position = player.currentPosition.coerceAtLeast(0L)
+        duration = player.duration.takeIf { it > 0L } ?: 0L
     }
-    Box(Modifier.fillMaxSize().background(Color(0xFF090A12))) {
-        art.bitmap?.let { bitmap ->
-            Image(bitmap.asImageBitmap(),null,Modifier.fillMaxSize().graphicsLayer{scaleX=1.45f;scaleY=1.45f}.blur(72.dp),contentScale=ContentScale.Crop)
-            Image(bitmap.asImageBitmap(),null,Modifier.fillMaxSize().graphicsLayer{scaleX=1.22f;scaleY=1.22f}.blur(36.dp),contentScale=ContentScale.Crop)
-        } ?: Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF4B347F),Color(0xFF232949),Color(0xFF090A12)))))
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xCC080810),Color(0x44202030),Color(0xEE080810)))))
-        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal=22.dp,vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                IconButton(onClick=onBack,modifier=Modifier.size(46.dp).background(Color.White.copy(alpha=.09f),CircleShape)){Icon(Icons.Default.KeyboardArrowDown,null,tint=fg,modifier=Modifier.size(30.dp))}
-                Column(Modifier.weight(1f),horizontalAlignment=Alignment.CenterHorizontally) {
-                    Text("NOW PLAYING",color=purple,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=2.sp)
-                    Text("On Player",color=muted,fontSize=12.sp)
+
+    Box(Modifier.fillMaxSize().background(Color(0xFF080912))) {
+        artwork.bitmap?.let { bitmap ->
+            Image(
+                bitmap.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f }.blur(82.dp),
+                contentScale = ContentScale.Crop
+            )
+            Image(
+                bitmap.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.28f; scaleY = 1.28f }.blur(42.dp),
+                contentScale = ContentScale.Crop
+            )
+        } ?: Box(
+            Modifier.fillMaxSize().background(
+                Brush.linearGradient(listOf(Color(0xFF48306F), Color(0xFF242846), Color(0xFF090A12)))
+            )
+        )
+
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xCC080810),
+                        Color(0x4A171426),
+                        Color(0xAA171321),
+                        Color(0xF5080912)
+                    )
+                )
+            )
+        )
+
+        // Soft, translucent highlights create a layered Liquid Glass atmosphere.
+        Box(
+            Modifier.align(Alignment.TopEnd).padding(top = 85.dp, end = 8.dp)
+                .size(170.dp).blur(70.dp)
+                .background(Color(0x665B4B9B), CircleShape)
+        )
+        Box(
+            Modifier.align(Alignment.BottomStart).padding(bottom = 150.dp, start = 0.dp)
+                .size(190.dp).blur(82.dp)
+                .background(Color(0x554D7BB7), CircleShape)
+        )
+
+        Column(
+            Modifier.fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 22.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(top = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                GlassIconButton(
+                    icon = Icons.Default.KeyboardArrowDown,
+                    description = "Close player",
+                    onClick = onBack,
+                    diameter = 46.dp
+                )
+                Column(
+                    Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("ON PLAYER", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.4.sp)
+                    Text("Now Playing", color = secondary, fontSize = 12.sp)
                 }
-                IconButton(onClick={},modifier=Modifier.size(46.dp).background(Color.White.copy(alpha=.09f),CircleShape)){Icon(Icons.Default.MoreHoriz,null,tint=fg)}
+                GlassIconButton(
+                    icon = Icons.Default.MoreHoriz,
+                    description = "More options",
+                    onClick = {},
+                    diameter = 46.dp
+                )
             }
-            Spacer(Modifier.weight(.18f))
-            Box(Modifier.fillMaxWidth().aspectRatio(1f).padding(horizontal=8.dp),contentAlignment=Alignment.Center) {
-                art.bitmap?.let{bitmap->Image(bitmap.asImageBitmap(),null,Modifier.fillMaxSize().graphicsLayer{scaleX=pulse;scaleY=pulse}.clip(RoundedCornerShape(30.dp)).border(1.dp,Color.White.copy(alpha=.18f),RoundedCornerShape(30.dp)),contentScale=ContentScale.Crop)}
-                ?:Box(Modifier.fillMaxSize().graphicsLayer{scaleX=pulse;scaleY=pulse}.clip(RoundedCornerShape(30.dp)).background(Brush.linearGradient(listOf(Color(0xFF8463CA),Color(0xFF293A79)))),contentAlignment=Alignment.Center){Icon(Icons.Default.MusicNote,null,tint=Color.White,modifier=Modifier.size(92.dp))}
-            }
-            Spacer(Modifier.weight(.20f))
-            Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.Start) {
-                Text(art.title,color=fg,fontSize=26.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
-                Text(art.artist+(if(art.album.isNotBlank())" • "+art.album else ""),color=muted,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(top=5.dp))
-            }
-            Slider(value=if(duration>0)position.toFloat().coerceIn(0f,duration.toFloat()) else 0f,onValueChange={position=it.toLong()},onValueChangeFinished={player.seekTo(position)},valueRange=0f..duration.toFloat().coerceAtLeast(1f),enabled=duration>0,colors=SliderDefaults.colors(thumbColor=Color.White,activeTrackColor=Color.White,inactiveTrackColor=Color.White.copy(alpha=.28f)))
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text(timeText(position),color=muted,fontSize=11.sp);Text(timeText(duration),color=muted,fontSize=11.sp) }
-            Row(Modifier.fillMaxWidth().padding(top=18.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceEvenly) {
-                IconButton(onClick={shuffle=!shuffle;player.shuffleModeEnabled=shuffle},modifier=Modifier.size(48.dp)){Icon(Icons.Default.Shuffle,null,tint=if(shuffle)purple else muted,modifier=Modifier.size(22.dp))}
-                IconButton(onClick={player.seekToPreviousMediaItem()},modifier=Modifier.size(60.dp)){Icon(Icons.Default.SkipPrevious,null,tint=fg,modifier=Modifier.size(36.dp))}
-                Box(Modifier.size(82.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Color.White,Color(0xFFE5D8FF)))),contentAlignment=Alignment.Center) {
-                    IconButton(onClick={if(player.isPlaying)player.pause()else player.play()},modifier=Modifier.size(82.dp)){Icon(if(playing)Icons.Default.Pause else Icons.Default.PlayArrow,null,tint=Color(0xFF191521),modifier=Modifier.size(42.dp))}
+
+            Spacer(Modifier.weight(0.14f))
+
+            Box(
+                Modifier.fillMaxWidth().aspectRatio(0.96f).padding(horizontal = 5.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                // Diffuse halo behind the album cover.
+                Box(
+                    Modifier.fillMaxSize(0.82f).blur(34.dp)
+                        .background(Color(0x667E6CC0), RoundedCornerShape(42.dp))
+                )
+                Box(
+                    Modifier.fillMaxSize()
+                        .graphicsLayer { scaleX = pulse; scaleY = pulse }
+                        .shadow(28.dp, RoundedCornerShape(34.dp), clip = false)
+                        .clip(RoundedCornerShape(34.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(Color(0xFF8C75C8), Color(0xFF29385E), Color(0xFF17192A))
+                            )
+                        )
+                        .border(
+                            1.dp,
+                            Brush.linearGradient(
+                                listOf(Color.White.copy(alpha = 0.75f), Color.White.copy(alpha = 0.07f), Color.White.copy(alpha = 0.28f))
+                            ),
+                            RoundedCornerShape(34.dp)
+                        )
+                ) {
+                    artwork.bitmap?.let { bitmap ->
+                        Image(
+                            bitmap.asImageBitmap(),
+                            contentDescription = "Album artwork",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Album, contentDescription = null, tint = Color.White.copy(alpha = 0.92f), modifier = Modifier.size(104.dp))
+                    }
+                    Box(
+                        Modifier.fillMaxWidth().height(76.dp).align(Alignment.TopCenter)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color.White.copy(alpha = 0.24f), Color.Transparent)
+                                )
+                            )
+                    )
                 }
-                IconButton(onClick={player.seekToNextMediaItem()},modifier=Modifier.size(60.dp)){Icon(Icons.Default.SkipNext,null,tint=fg,modifier=Modifier.size(36.dp))}
-                IconButton(onClick={repeatOne=!repeatOne;player.repeatMode=if(repeatOne)Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF},modifier=Modifier.size(48.dp)){Icon(Icons.Default.RepeatOne,null,tint=if(repeatOne)purple else muted,modifier=Modifier.size(22.dp))}
             }
-            Spacer(Modifier.height(16.dp))
+
+            Spacer(Modifier.weight(0.13f))
+
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        artwork.title,
+                        color = foreground,
+                        fontSize = 25.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        listOf(artwork.artist, artwork.album).filter { it.isNotBlank() }.joinToString(" • "),
+                        color = secondary.copy(alpha = 0.84f),
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 5.dp)
+                    )
+                }
+                GlassIconButton(
+                    icon = Icons.Default.FavoriteBorder,
+                    description = "Favorite",
+                    onClick = {},
+                    diameter = 46.dp
+                )
+            }
+
+            Spacer(Modifier.height(19.dp))
+
+            LiquidSeekBar(
+                positionMs = position,
+                durationMs = duration,
+                onSeek = { target -> position = target },
+                onSeekFinished = { player.seekTo(it) }
+            )
+
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 1.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(timeText(position), color = secondary.copy(alpha = 0.78f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                Text(timeText(duration), color = secondary.copy(alpha = 0.78f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+            }
+
+            Spacer(Modifier.height(19.dp))
+
+            Row(
+                Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(38.dp))
+                    .background(Color.White.copy(alpha = 0.085f))
+                    .border(
+                        1.dp,
+                        Brush.linearGradient(
+                            listOf(Color.White.copy(alpha = 0.42f), Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.2f))
+                        ),
+                        RoundedCornerShape(38.dp)
+                    )
+                    .padding(horizontal = 5.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                GlassIconButton(
+                    icon = Icons.Default.Shuffle,
+                    description = "Shuffle",
+                    onClick = { shuffle = !shuffle; player.shuffleModeEnabled = shuffle },
+                    diameter = 42.dp,
+                    active = shuffle
+                )
+                GlassIconButton(
+                    icon = Icons.Default.SkipPrevious,
+                    description = "Previous track",
+                    onClick = { player.seekToPreviousMediaItem() },
+                    diameter = 50.dp
+                )
+                GlassPlayButton(
+                    playing = playing,
+                    onClick = { if (player.isPlaying) player.pause() else player.play() }
+                )
+                GlassIconButton(
+                    icon = Icons.Default.SkipNext,
+                    description = "Next track",
+                    onClick = { player.seekToNextMediaItem() },
+                    diameter = 50.dp
+                )
+                GlassIconButton(
+                    icon = Icons.Default.RepeatOne,
+                    description = "Repeat one",
+                    onClick = {
+                        repeatOne = !repeatOne
+                        player.repeatMode = if (repeatOne) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+                    },
+                    diameter = 42.dp,
+                    active = repeatOne
+                )
+            }
+
+            Spacer(Modifier.weight(0.12f))
+
+            Row(
+                Modifier.fillMaxWidth().padding(bottom = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(Icons.Default.GraphicEq, contentDescription = null, tint = accent.copy(alpha = 0.85f), modifier = Modifier.size(17.dp))
+                Text(
+                    "  PLAYING FROM YOUR LIBRARY",
+                    color = secondary.copy(alpha = 0.75f),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.5.sp
+                )
+            }
         }
     }
 }
 
-private fun timeText(ms:Long):String {
-    val sec=(ms/1000).coerceAtLeast(0)
-    return "%d:%02d".format(sec/60,sec%60)
+@Composable
+private fun GlassIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    description: String,
+    onClick: () -> Unit,
+    diameter: Dp,
+    active: Boolean = false
+) {
+    val shape = CircleShape
+    Box(
+        Modifier.size(diameter)
+            .shadow(12.dp, shape, clip = false)
+            .clip(shape)
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        Color.White.copy(alpha = if (active) 0.30f else 0.19f),
+                        Color.White.copy(alpha = 0.055f),
+                        Color(0xFF26243A).copy(alpha = 0.34f)
+                    )
+                )
+            )
+            .border(
+                1.dp,
+                Brush.linearGradient(
+                    listOf(Color.White.copy(alpha = 0.62f), Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.28f))
+                ),
+                shape
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            icon,
+            contentDescription = description,
+            tint = if (active) Color(0xFFE0C9FF) else Color.White.copy(alpha = 0.94f),
+            modifier = Modifier.size(if (diameter >= 50.dp) 28.dp else 21.dp)
+        )
+    }
+}
+
+@Composable
+private fun GlassPlayButton(playing: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier.size(76.dp)
+            .shadow(20.dp, CircleShape, clip = false)
+            .clip(CircleShape)
+            .background(
+                Brush.linearGradient(
+                    listOf(Color(0xFFFDFBFF), Color(0xFFDCCBFA), Color(0xFFA993D7))
+                )
+            )
+            .border(
+                1.dp,
+                Brush.linearGradient(listOf(Color.White, Color.White.copy(alpha = 0.18f))),
+                CircleShape
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.58f), Color.Transparent, Color.Transparent))
+            )
+        )
+        Icon(
+            if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+            contentDescription = if (playing) "Pause" else "Play",
+            tint = Color(0xFF211A31),
+            modifier = Modifier.size(39.dp)
+        )
+    }
+}
+
+@Composable
+private fun LiquidSeekBar(
+    positionMs: Long,
+    durationMs: Long,
+    onSeek: (Long) -> Unit,
+    onSeekFinished: (Long) -> Unit
+) {
+    val safeDuration = durationMs.coerceAtLeast(1L)
+    val fraction = (positionMs.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
+    var widthPx by remember { mutableFloatStateOf(1f) }
+    val latestOnSeek by rememberUpdatedState(onSeek)
+    val latestOnSeekFinished by rememberUpdatedState(onSeekFinished)
+
+    fun positionAt(x: Float): Long {
+        val normalized = (x / widthPx).coerceIn(0f, 1f)
+        return (normalized * safeDuration.toFloat()).toLong().coerceIn(0L, safeDuration)
+    }
+
+    Canvas(
+        Modifier.fillMaxWidth()
+            .height(34.dp)
+            .onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) }
+            .pointerInput(safeDuration, widthPx) {
+                detectTapGestures { offset ->
+                    val target = positionAt(offset.x)
+                    latestOnSeek(target)
+                    latestOnSeekFinished(target)
+                }
+            }
+            .pointerInput(safeDuration, widthPx) {
+                detectDragGestures(
+                    onDragStart = { offset -> latestOnSeek(positionAt(offset.x)) },
+                    onDrag = { change, _ ->
+                        change.consume()
+                        latestOnSeek(positionAt(change.position.x))
+                    },
+                    onDragEnd = {
+                        latestOnSeekFinished((fraction * safeDuration.toFloat()).toLong())
+                    }
+                )
+            }
+    ) {
+        val trackHeight = 4.5.dp.toPx()
+        val centerY = size.height / 2f
+        val progressWidth = (size.width * fraction).coerceIn(0f, size.width)
+        val radius = trackHeight / 2f
+
+        drawRoundRect(
+            color = Color.White.copy(alpha = 0.22f),
+            topLeft = Offset(0f, centerY - radius),
+            size = Size(size.width, trackHeight),
+            cornerRadius = CornerRadius(radius, radius)
+        )
+        if (progressWidth > 0f) {
+            drawRoundRect(
+                brush = Brush.horizontalGradient(
+                    listOf(Color(0xFFF8F2FF), Color(0xFFD9B9FF), Color(0xFFBDA0F2))
+                ),
+                topLeft = Offset(0f, centerY - radius),
+                size = Size(progressWidth, trackHeight),
+                cornerRadius = CornerRadius(radius, radius)
+            )
+        }
+        val thumb = Offset(progressWidth, centerY)
+        drawCircle(Color.Black.copy(alpha = 0.28f), radius = 10.dp.toPx(), center = thumb.copy(y = centerY + 1.5.dp.toPx()))
+        drawCircle(Color.White.copy(alpha = 0.25f), radius = 10.dp.toPx(), center = thumb, style = Stroke(width = 1.dp.toPx()))
+        drawCircle(Color.White, radius = 6.5.dp.toPx(), center = thumb)
+    }
+}
+
+private fun timeText(ms: Long): String {
+    val seconds = (ms / 1000L).coerceAtLeast(0L)
+    return "%d:%02d".format(seconds / 60L, seconds % 60L)
 }
