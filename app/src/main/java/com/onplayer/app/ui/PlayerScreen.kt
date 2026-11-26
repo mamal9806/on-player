@@ -95,10 +95,32 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF9B4DFF)) }
         return
     }
-    LaunchedEffect(controller, file.uri) {
-        controller.setMediaItem(MediaItem.Builder().setUri(file.uri).setMediaMetadata(MediaMetadata.Builder().setTitle(file.name).setArtist(if (file.category == MediaCategory.Audio) "On Player" else "Video").build()).build())
-        controller.prepare()
-        controller.playWhenReady = false
+    val playableQueue = remember(files, file.category) { files.filter { it.category == file.category && it.isPlayable } }
+    DisposableEffect(controller, files) {
+        val listener = object : androidx.media3.common.Player.Listener {
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                val uri = mediaItem?.localConfiguration?.uri ?: return
+                files.firstOrNull { it.uri == uri }?.let(vm::open)
+            }
+        }
+        controller.addListener(listener)
+        onDispose { controller.removeListener(listener) }
+    }
+    LaunchedEffect(controller, file.uri, playableQueue) {
+        if (controller.currentMediaItem?.localConfiguration?.uri != file.uri) {
+            val queueItems = playableQueue.map { item ->
+                val cleanTitle = item.name.substringBeforeLast('.', item.name).trim().ifBlank { item.name }
+                MediaItem.Builder().setUri(item.uri).setMediaMetadata(
+                    MediaMetadata.Builder().setTitle(cleanTitle)
+                        .setArtist(if (item.category == MediaCategory.Audio) "On Player" else "Video").build()
+                ).build()
+            }
+            val startIndex = playableQueue.indexOfFirst { it.uri == file.uri }.coerceAtLeast(0)
+            val wasPlaying = controller.playWhenReady
+            controller.setMediaItems(queueItems, startIndex, 0L)
+            controller.prepare()
+            controller.playWhenReady = wasPlaying
+        }
     }
     PlayerScreenContent(file, files, vm, nav, controller)
 }
@@ -125,7 +147,7 @@ private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnP
     var sleepDialog by remember { mutableStateOf(false) }
     var sleepJob by remember(file.uri) { mutableStateOf<Job?>(null) }
     DisposableEffect(file.uri) { onDispose { sleepJob?.cancel() } }
-    val playable = remember(files) { files.filter { it.isPlayable } }
+    val playable = remember(files, file.category) { files.filter { it.category == file.category && it.isPlayable } }
     val currentIndex = playable.indexOfFirst { it.uri == file.uri }
     var isPlaying by remember(file.uri) { mutableStateOf(false) }
     var speed by remember(file.uri) { mutableStateOf(1f) }
@@ -156,7 +178,7 @@ private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnP
         Row(Modifier.fillMaxWidth().padding(vertical = 6.dp).background(Brush.horizontalGradient(listOf(Color(0xAA312A50),Color(0xAA171722))),RoundedCornerShape(22.dp)), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { nav.popBackStack() }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
             Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
-                Text(file.name, color = Color.White, maxLines = 1)
+                Text(if (file.category == MediaCategory.Audio) audioMeta.title else file.name, color = Color.White, maxLines = 1)
                 Text(if(file.category==MediaCategory.Audio) "Music player" else "Video player", color = Color(0xFFBDB6D6), style = MaterialTheme.typography.labelSmall)
             }
             IconButton(onClick = { queueOpen = true }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.QueueMusic, null, tint = Color.White) }
@@ -173,15 +195,15 @@ private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnP
                 Text(audioMeta.title,color=Color.White,style=MaterialTheme.typography.titleLarge,maxLines=1,modifier=Modifier.padding(top=18.dp))
                 Text(audioMeta.artist+(if(audioMeta.album.isNotBlank()) " • "+audioMeta.album else ""),color=Color(0xFFBDB6D6),maxLines=1)
                 Row(Modifier.height(90.dp).padding(top=16.dp),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.Bottom) {
-                    repeat(18) { i ->
-                        val bar=visualizer.animateFloat(initialValue=.18f,targetValue=.28f+(i%5)*.12f,animationSpec=infiniteRepeatable(tween(550+i*35,delayMillis=i*45),RepeatMode.Reverse),label="bar-${i}")
+                    repeat(10) { i ->
+                        val bar=visualizer.animateFloat(initialValue=.18f,targetValue=.24f+(i%4)*.08f,animationSpec=infiniteRepeatable(tween(850+i*30,delayMillis=i*35),RepeatMode.Reverse),label="bar-${i}")
                         Box(Modifier.width(7.dp).height((bar.value*88).dp).background(Brush.verticalGradient(listOf(Color(0xFFB99AFF),Color(0xFF6041C9))),RoundedCornerShape(6.dp)))
                     }
                 }
             }
         } else AndroidView(factory = { ctx -> PlayerView(ctx).apply { playerView=this; this.player=player; useController=true; resizeMode=aspect } }, update = { it.player=player; it.resizeMode=aspect }, modifier = Modifier.fillMaxWidth().weight(1f).background(Color.Black,RoundedCornerShape(24.dp)).graphicsLayer { rotationZ=rotation })
         Column(Modifier.fillMaxWidth().padding(top=12.dp).background(Brush.verticalGradient(listOf(Color(0xAA29243E),Color(0xAA171722))),RoundedCornerShape(24.dp)).padding(14.dp)) {
-            Text(file.name, color=Color.White, style=MaterialTheme.typography.titleMedium, maxLines=1)
+            Text(if (file.category == MediaCategory.Audio) audioMeta.title else file.name, color=Color.White, style=MaterialTheme.typography.titleMedium, maxLines=1)
             Text(file.category.label+" • "+file.sizeText, color=Color(0xFFBDB6D6), style=MaterialTheme.typography.labelSmall)
             Slider(value=if(duration>0) position.coerceIn(0f,duration) else 0f, onValueChange={position=it}, onValueChangeFinished={player.seekTo(position.toLong())}, valueRange=0f..duration.coerceAtLeast(1f), enabled=duration>0)
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(formatPlayerTime(position.toLong()),color=Color(0xFFBDB6D6),fontSize=11.sp);Text(formatPlayerTime(duration.toLong()),color=Color(0xFFBDB6D6),fontSize=11.sp)}
