@@ -422,12 +422,12 @@ private fun MiniPlayer(file:MediaFile,playing:Boolean,dark:Boolean,controller:Me
     val accent = MaterialTheme.colorScheme.primary
     Column(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=5.dp).clip(RoundedCornerShape(17.dp)).background(if(dark)Color(0xFF242330)else Color(0xFFF0EDFA))) {
       Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=10.dp,vertical=7.dp),verticalAlignment=Alignment.CenterVertically) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp).background(Purple)),contentAlignment=Alignment.Center) { if(art!=null)Image(art!!.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)else Icon(Icons.Default.MusicNote,null,tint=Color.White) }
+        Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Purple),contentAlignment=Alignment.Center) { if(art!=null)Image(art!!.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)else Icon(Icons.Default.MusicNote,null,tint=Color.White) }
         Column(Modifier.weight(1f).padding(horizontal=10.dp)) { Text(file.displayTitle,color=if(dark)Color.White else Color(0xFF20202A),fontWeight=FontWeight.SemiBold,maxLines=1);Text(file.displayArtist,color=Subtle,fontSize=11.sp,maxLines=1) }
         IconButton(onClick=onToggle) { Icon(if(playing)Icons.Default.Pause else Icons.Default.PlayArrow,null,tint=accent) }
       }
       Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(bottom=6.dp)) {
-        Box(Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(99.dp)).background(if(dark)Color.White.copy(alpha=0.15f)else Color.Black.copy(alpha=0.10f))) {
+        Box(Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(99.dp)).background(if(dark)Color.White.copy(alpha=0.15f)else Color.Black.copy(alpha=0.10f)).pointerInput(dur) { androidx.compose.foundation.gestures.detectTapGestures { tap -> if (dur > 0L) controller?.seekTo((tap.x / size.width.coerceAtLeast(1).toFloat() * dur).toLong().coerceIn(0L,dur)) } }.pointerInput(dur) { androidx.compose.foundation.gestures.detectDragGestures { change, _ -> if (dur > 0L) controller?.seekTo((change.position.x / size.width.coerceAtLeast(1).toFloat() * dur).toLong().coerceIn(0L,dur)) } }).background(if(dark)Color.White.copy(alpha=0.15f)else Color.Black.copy(alpha=0.10f))) {
           Box(Modifier.fillMaxWidth(if(dur>0L)(pos.toFloat()/dur.toFloat()).coerceIn(0f,1f) else 0f).fillMaxHeight().clip(RoundedCornerShape(99.dp)).background(accent))
         }
         Row(Modifier.fillMaxWidth().padding(top=2.dp),horizontalArrangement=Arrangement.SpaceBetween) {
