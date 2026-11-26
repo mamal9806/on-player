@@ -118,6 +118,8 @@ fun PlayerScreen(
     }
 
     val artwork = rememberTrackArtwork(file)
+    val favorites by vm.favorites.collectAsState()
+    val isFavorite = file.uri.toString() in favorites
     val queue = remember(files, file.uri) {
         files.filter { it.isPlayable }.let { playable ->
             if (playable.any { it.uri == file.uri }) playable else listOf(file) + playable
@@ -333,10 +335,11 @@ fun PlayerScreen(
                     )
                 }
                 GlassIconButton(
-                    icon = Icons.Default.FavoriteBorder,
-                    description = "Favorite",
-                    onClick = {},
-                    diameter = 46.dp
+                    icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    description = if (isFavorite) "Remove favorite" else "Add favorite",
+                    onClick = { vm.toggleFavorite(file) },
+                    diameter = 46.dp,
+                    active = isFavorite
                 )
             }
 
