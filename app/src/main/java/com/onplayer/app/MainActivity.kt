@@ -1,6 +1,9 @@
 package com.onplayer.app
 
 import android.Manifest
+import android.app.Activity
+import android.content.ContentValues
+import android.provider.MediaStore
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -9,6 +12,7 @@ import android.media.MediaMetadataRetriever
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -204,12 +208,42 @@ class MainActivity : ComponentActivity() {
     val context=androidx.compose.ui.platform.LocalContext.current
     var menuOpen by remember(file.uri) { mutableStateOf(false) }
     var detailsOpen by remember(file.uri) { mutableStateOf(false) }
+    var deleteDialog by remember(file.uri) { mutableStateOf(false) }
+    var renameDialog by remember(file.uri) { mutableStateOf(false) }
+    var renameText by remember(file.uri) { mutableStateOf(file.name) }
+    val deleteLauncher=rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()){ result -> if(result.resultCode==Activity.RESULT_OK) vm.scan() }
+    val writeLauncher=rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()){ result ->
+        if(result.resultCode==Activity.RESULT_OK) try { context.contentResolver.update(file.uri,ContentValues().apply{put(MediaStore.MediaColumns.DISPLAY_NAME,renameText.trim())},null,null);vm.scan() } catch(_:Exception) { android.widget.Toast.makeText(context,"Rename failed",android.widget.Toast.LENGTH_SHORT).show() }
+    }
     val icon=when(file.category){MediaCategory.Images->Icons.Default.Image;MediaCategory.Videos->Icons.Default.Movie;MediaCategory.Audio->Icons.Default.MusicNote;MediaCategory.Documents->Icons.Default.Description;MediaCategory.Archives->Icons.Default.FolderZip;MediaCategory.APK->Icons.Default.Android;else->Icons.Default.InsertDriveFile}
     fun openExternal() {
         try { val i=Intent(Intent.ACTION_VIEW).apply{setDataAndType(file.uri,file.mime);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)};context.startActivity(Intent.createChooser(i,"Open file")) } catch(_:Exception) { android.widget.Toast.makeText(context,"No app can open this file",android.widget.Toast.LENGTH_SHORT).show() }
     }
     fun shareFile() {
         try { val i=Intent(Intent.ACTION_SEND).apply{type=file.mime;putExtra(Intent.EXTRA_STREAM,file.uri);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)};context.startActivity(Intent.createChooser(i,"Share file")) } catch(_:Exception) { }
+    }
+    fun requestDelete() {
+        try {
+            if(Build.VERSION.SDK_INT>=30) {
+                val request=MediaStore.createDeleteRequest(context.contentResolver,listOf(file.uri))
+                deleteLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
+            } else {
+                if(context.contentResolver.delete(file.uri,null,null)>0) vm.scan()
+                else android.widget.Toast.makeText(context,"Could not delete file",android.widget.Toast.LENGTH_SHORT).show()
+            }
+        } catch(_:Exception) { android.widget.Toast.makeText(context,"Delete permission was not granted",android.widget.Toast.LENGTH_SHORT).show() }
+    }
+    fun requestRename() {
+        val newName=renameText.trim()
+        if(newName.isBlank()||newName==file.name) return
+        try {
+            if(Build.VERSION.SDK_INT>=30) {
+                val request=MediaStore.createWriteRequest(context.contentResolver,listOf(file.uri))
+                writeLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
+            } else {
+                if(context.contentResolver.update(file.uri,ContentValues().apply{put(MediaStore.MediaColumns.DISPLAY_NAME,newName)},null,null)>0) vm.scan()
+            }
+        } catch(_:Exception) { android.widget.Toast.makeText(context,"Rename permission or operation failed",android.widget.Toast.LENGTH_SHORT).show() }
     }
     Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(if(light) listOf(Color.White,Color(0xFFF5F2FF)) else listOf(Color(0xCC272439),Color(0xCC171722))),RoundedCornerShape(18.dp)).border(1.dp,if(light) Color.White else Color.White.copy(alpha=.08f),RoundedCornerShape(18.dp)).clickable {
         if(file.category==MediaCategory.Audio||file.category==MediaCategory.Videos||file.category==MediaCategory.Images){vm.open(file);nav.navigate("player")} else openExternal()
@@ -226,7 +260,9 @@ class MainActivity : ComponentActivity() {
             DropdownMenu(expanded=menuOpen,onDismissRequest={menuOpen=false}) {
                 DropdownMenuItem(text={Text("Open with…")},onClick={menuOpen=false;openExternal()},leadingIcon={Icon(Icons.Default.OpenInNew,null)})
                 DropdownMenuItem(text={Text("Share")},onClick={menuOpen=false;shareFile()},leadingIcon={Icon(Icons.Default.Share,null)})
+                DropdownMenuItem(text={Text("Rename")},onClick={menuOpen=false;renameText=file.name;renameDialog=true},leadingIcon={Icon(Icons.Default.Edit,null)})
                 DropdownMenuItem(text={Text("File details")},onClick={menuOpen=false;detailsOpen=true},leadingIcon={Icon(Icons.Default.Info,null)})
+                DropdownMenuItem(text={Text("Delete")},onClick={menuOpen=false;deleteDialog=true},leadingIcon={Icon(Icons.Default.Delete,null)})
             }
         }
     }
@@ -238,6 +274,8 @@ class MainActivity : ComponentActivity() {
         Text("Modified: ${SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.getDefault()).format(Date(file.modified*1000))}")
         Text("URI: ${file.uri}",maxLines=3)
     }},confirmButton={TextButton(onClick={detailsOpen=false}){Text("Close")}})
+    if(renameDialog) AlertDialog(onDismissRequest={renameDialog=false},title={Text("Rename file")},text={OutlinedTextField(value=renameText,onValueChange={renameText=it},singleLine=true,label={Text("New file name")})},confirmButton={TextButton(onClick={renameDialog=false;requestRename()}){Text("Rename")}},dismissButton={TextButton(onClick={renameDialog=false}){Text("Cancel")}})
+    if(deleteDialog) AlertDialog(onDismissRequest={deleteDialog=false},title={Text("Delete file?")},text={Text("Do you want to delete ${file.name}? Android may ask you to confirm this action.")},confirmButton={TextButton(onClick={deleteDialog=false;requestDelete()}){Text("Delete")}},dismissButton={TextButton(onClick={deleteDialog=false}){Text("Cancel")}})
 }
 @Composable private fun LibraryScreen(files:List<MediaFile>,vm:OnPlayerViewModel,nav:NavHostController,favorites:Set<String>,light:Boolean,fg:Color,muted:Color){
     var sort by remember { mutableStateOf("Newest") }
