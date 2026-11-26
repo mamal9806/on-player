@@ -23,11 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -58,23 +53,24 @@ import com.onplayer.app.data.MediaCategory
 
 private data class AudioMeta(val title:String,val artist:String,val album:String,val artwork:Bitmap?)
 
+private fun String?.validAudioTag(): String? = this?.trim()?.takeIf {
+    it.isNotBlank() && !it.equals("unknown", true) && !it.equals("<unknown>", true) && !it.equals("null", true)
+}
+
 @Composable
 private fun rememberAudioMeta(file:MediaFile):AudioMeta {
     val context=LocalContext.current
-    val initial=AudioMeta(file.name,"Unknown artist","",null)
+    val initial=AudioMeta(file.displayTitle,file.displayArtist,file.displayAlbum,null)
     val meta by produceState(initial,file.uri) {
         value=withContext(Dispatchers.IO) {
             val retriever=MediaMetadataRetriever()
             try {
                 retriever.setDataSource(context,file.uri)
-                val rawTitle=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)?.trim()
-                val title=rawTitle?.takeIf { it.isNotBlank() && !it.equals("unknown",true) } ?: file.name.substringBeforeLast('.',file.name)
-                val rawArtist=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)?.trim()
-                val artist=rawArtist?.takeIf { it.isNotBlank() && !it.equals("unknown",true) } ?: "Unknown artist"
-                val rawAlbum=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)?.trim()
-                val album=rawAlbum?.takeIf { it.isNotBlank() && !it.equals("unknown",true) } ?: ""
+                val title=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE).validAudioTag() ?: file.displayTitle
+                val artist=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST).validAudioTag() ?: file.displayArtist
+                val album=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM).validAudioTag() ?: file.displayAlbum
                 val art=retriever.embeddedPicture?.let { bytes ->
-                    val options=BitmapFactory.Options().apply { inSampleSize=2 }
+                    val options=BitmapFactory.Options().apply { inSampleSize=4 }
                     BitmapFactory.decodeByteArray(bytes,0,bytes.size,options)
                 }
                 AudioMeta(title,artist,album,art)
@@ -88,6 +84,7 @@ private fun rememberAudioMeta(file:MediaFile):AudioMeta {
 fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel, nav: NavHostController) {
     val context = LocalContext.current
     val controller = rememberMediaController(context)
+    val requestedPlayNext by vm.playNextRequest.collectAsState()
     if (file == null) {
         Column(Modifier.fillMaxSize().padding(bottom = 90.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Icon(Icons.Default.PlayCircle, null, tint = Color(0xFF9B4DFF), modifier = Modifier.size(72.dp))
@@ -101,7 +98,10 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF9B4DFF)) }
         return
     }
-    val playableQueue = remember(files, file.category) { files.filter { it.category == file.category && it.isPlayable } }
+    val playableQueue = remember(files, file.category, file.uri) {
+        val sameType = files.filter { it.category == file.category && it.isPlayable }
+        if (sameType.any { it.uri == file.uri }) sameType else listOf(file) + sameType
+    }
     DisposableEffect(controller, files) {
         val listener = object : androidx.media3.common.Player.Listener {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -112,13 +112,15 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
         controller.addListener(listener)
         onDispose { controller.removeListener(listener) }
     }
-    LaunchedEffect(controller, file.uri, playableQueue) {
+    LaunchedEffect(controller, file.uri, playableQueue, requestedPlayNext) {
         if (controller.currentMediaItem?.localConfiguration?.uri != file.uri) {
             val queueItems = playableQueue.map { item ->
-                val cleanTitle = item.name.substringBeforeLast('.', item.name).trim().ifBlank { item.name }
                 MediaItem.Builder().setUri(item.uri).setMediaMetadata(
-                    MediaMetadata.Builder().setTitle(cleanTitle)
-                        .setArtist(if (item.category == MediaCategory.Audio) "On Player" else "Video").build()
+                    MediaMetadata.Builder()
+                        .setTitle(item.displayTitle)
+                        .setArtist(if (item.category == MediaCategory.Audio) item.displayArtist else "On Player")
+                        .setAlbumTitle(item.displayAlbum)
+                        .build()
                 ).build()
             }
             val startIndex = playableQueue.indexOfFirst { it.uri == file.uri }.coerceAtLeast(0)
@@ -126,6 +128,37 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
             controller.setMediaItems(queueItems, startIndex, 0L)
             controller.prepare()
             controller.playWhenReady = wasPlaying
+        }
+
+        requestedPlayNext?.let { next ->
+            val currentUri = controller.currentMediaItem?.localConfiguration?.uri
+            if (currentUri == next.uri) {
+                vm.clearPlayNextRequest(next)
+            } else {
+                if (currentUri != null) {
+                    val oldIndex = controller.mediaItems.indexOfFirst { it.localConfiguration?.uri == next.uri }
+                    if (oldIndex >= 0) controller.removeMediaItem(oldIndex)
+                    val activeIndex = controller.mediaItems.indexOfFirst { it.localConfiguration?.uri == currentUri }
+                    val insertAt = if (activeIndex >= 0) activeIndex + 1 else controller.mediaItemCount
+                    val nextItem = MediaItem.Builder().setUri(next.uri).setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(next.displayTitle)
+                            .setArtist(next.displayArtist)
+                            .setAlbumTitle(next.displayAlbum)
+                            .build()
+                    ).build()
+                    controller.addMediaItem(insertAt.coerceIn(0, controller.mediaItemCount), nextItem)
+                    vm.clearPlayNextRequest(next)
+                } else {
+                    val nextItem = MediaItem.Builder().setUri(next.uri).setMediaMetadata(
+                        MediaMetadata.Builder().setTitle(next.displayTitle).setArtist(next.displayArtist).setAlbumTitle(next.displayAlbum).build()
+                    ).build()
+                    controller.setMediaItem(nextItem)
+                    controller.prepare()
+                    controller.play()
+                    vm.clearPlayNextRequest(next)
+                }
+            }
         }
     }
     PlayerScreenContent(file, files, vm, nav, controller)
@@ -148,14 +181,16 @@ private fun rememberMediaController(context: android.content.Context): MediaCont
 private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnPlayerViewModel, nav: NavHostController, player: MediaController) {
     val context = LocalContext.current
     val audioMeta = rememberAudioMeta(file)
-    val visualizer = rememberInfiniteTransition(label="music-bars")
     val timerScope = rememberCoroutineScope()
     var sleepDialog by remember { mutableStateOf(false) }
     var sleepJob by remember(file.uri) { mutableStateOf<Job?>(null) }
     DisposableEffect(file.uri) { onDispose { sleepJob?.cancel() } }
-    val playable = remember(files, file.category) { files.filter { it.category == file.category && it.isPlayable } }
+    val playable = remember(files, file.category, file.uri) {
+        val sameType = files.filter { it.category == file.category && it.isPlayable }
+        if (sameType.any { it.uri == file.uri }) sameType else listOf(file) + sameType
+    }
     val currentIndex = playable.indexOfFirst { it.uri == file.uri }
-    var isPlaying by remember(file.uri) { mutableStateOf(false) }
+    var isPlaying by remember(file.uri) { mutableStateOf(player.isPlaying) }
     var speed by remember(file.uri) { mutableStateOf(1f) }
     var repeat by remember(file.uri) { mutableStateOf(false) }
     var shuffle by remember(file.uri) { mutableStateOf(false) }
@@ -167,24 +202,42 @@ private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnP
     var fullscreen by remember(file.uri) { mutableStateOf(false) }
     var queueOpen by remember(file.uri) { mutableStateOf(false) }
     var playerView by remember { mutableStateOf<PlayerView?>(null) }
-    LaunchedEffect(player) {
-        while (true) {
+    DisposableEffect(player) {
+        val listener = object : androidx.media3.common.Player.Listener {
+            override fun onIsPlayingChanged(playing: Boolean) {
+                isPlaying = playing
+            }
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                position = 0f
+                duration = player.duration.takeIf { it > 0L }?.toFloat() ?: 0f
+            }
+        }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
+    LaunchedEffect(player, isPlaying) {
+        if (isPlaying) {
+            while (true) {
+                position = player.currentPosition.coerceAtLeast(0L).toFloat()
+                duration = player.duration.takeIf { it > 0L }?.toFloat() ?: 0f
+                delay(900)
+            }
+        } else {
             position = player.currentPosition.coerceAtLeast(0L).toFloat()
             duration = player.duration.takeIf { it > 0L }?.toFloat() ?: 0f
-            isPlaying = player.isPlaying
-            delay(450)
         }
     }
     fun playAt(index: Int) {
         if (index in playable.indices) {
-            vm.open(playable[index])
+            player.seekTo(index, 0L)
+            player.play()
         }
     }
     Column(Modifier.fillMaxSize().padding(bottom = 90.dp).padding(horizontal = 12.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 6.dp).background(Brush.horizontalGradient(listOf(Color(0xAA312A50),Color(0xAA171722))),RoundedCornerShape(22.dp)), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { nav.popBackStack() }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
             Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
-                Text(if (file.category == MediaCategory.Audio) audioMeta.title else file.name, color = Color.White, maxLines = 1)
+                Text(if (file.category == MediaCategory.Audio) audioMeta.title else file.displayTitle, color = Color.White, maxLines = 1)
                 Text(if(file.category==MediaCategory.Audio) "Music player" else "Video player", color = Color(0xFFBDB6D6), style = MaterialTheme.typography.labelSmall)
             }
             IconButton(onClick = { queueOpen = true }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.QueueMusic, null, tint = Color.White) }
@@ -201,23 +254,25 @@ private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnP
                 Text(audioMeta.title,color=Color.White,style=MaterialTheme.typography.titleLarge,maxLines=1,modifier=Modifier.padding(top=18.dp))
                 Text(audioMeta.artist+(if(audioMeta.album.isNotBlank()) " • "+audioMeta.album else ""),color=Color(0xFFBDB6D6),maxLines=1)
                 Row(Modifier.height(90.dp).padding(top=16.dp),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.Bottom) {
-                    repeat(10) { i ->
-                        val bar=visualizer.animateFloat(initialValue=.18f,targetValue=.24f+(i%4)*.08f,animationSpec=infiniteRepeatable(tween(850+i*30,delayMillis=i*35),RepeatMode.Reverse),label="bar-${i}")
-                        Box(Modifier.width(7.dp).height((bar.value*88).dp).background(Brush.verticalGradient(listOf(Color(0xFFB99AFF),Color(0xFF6041C9))),RoundedCornerShape(6.dp)))
+                    listOf(24, 46, 32, 62, 40, 54, 28, 48, 36, 22).forEach { barHeight ->
+                        Box(
+                            Modifier.width(7.dp).height(barHeight.dp)
+                                .background(Brush.verticalGradient(listOf(Color(0xFFB99AFF),Color(0xFF6041C9))),RoundedCornerShape(6.dp))
+                        )
                     }
                 }
             }
         } else AndroidView(factory = { ctx -> PlayerView(ctx).apply { playerView=this; this.player=player; useController=true; resizeMode=aspect } }, update = { it.player=player; it.resizeMode=aspect }, modifier = Modifier.fillMaxWidth().weight(1f).background(Color.Black,RoundedCornerShape(24.dp)).graphicsLayer { rotationZ=rotation })
         Column(Modifier.fillMaxWidth().padding(top=12.dp).background(Brush.verticalGradient(listOf(Color(0xAA29243E),Color(0xAA171722))),RoundedCornerShape(24.dp)).padding(14.dp)) {
-            Text(if (file.category == MediaCategory.Audio) audioMeta.title else file.name, color=Color.White, style=MaterialTheme.typography.titleMedium, maxLines=1)
+            Text(if (file.category == MediaCategory.Audio) audioMeta.title else file.displayTitle, color=Color.White, style=MaterialTheme.typography.titleMedium, maxLines=1)
             Text(file.category.label+" • "+file.sizeText, color=Color(0xFFBDB6D6), style=MaterialTheme.typography.labelSmall)
             Slider(value=if(duration>0) position.coerceIn(0f,duration) else 0f, onValueChange={position=it}, onValueChangeFinished={player.seekTo(position.toLong())}, valueRange=0f..duration.coerceAtLeast(1f), enabled=duration>0)
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(formatPlayerTime(position.toLong()),color=Color(0xFFBDB6D6),fontSize=11.sp);Text(formatPlayerTime(duration.toLong()),color=Color(0xFFBDB6D6),fontSize=11.sp)}
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
                 IconButton(onClick={shuffle=!shuffle;player.shuffleModeEnabled=shuffle}) { Icon(Icons.Default.Shuffle,null,tint=if(shuffle) Color(0xFFC5A6FF) else Color.Gray) }
-                IconButton(onClick={playAt(currentIndex-1)},enabled=currentIndex>0) { Icon(Icons.Default.SkipPrevious,null,tint=if(currentIndex>0) Color.White else Color.Gray,modifier=Modifier.size(32.dp)) }
+                IconButton(onClick={player.seekToPreviousMediaItem()},enabled=player.isCommandAvailable(androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)) { Icon(Icons.Default.SkipPrevious,null,tint=if(currentIndex>0) Color.White else Color.Gray,modifier=Modifier.size(32.dp)) }
                 IconButton(onClick={if(isPlaying)player.pause() else player.play();isPlaying=!isPlaying},modifier=Modifier.size(64.dp).background(Color(0x552B2355),RoundedCornerShape(50)).border(1.5.dp,Color(0x66C5A6FF),RoundedCornerShape(50))) { Icon(if(isPlaying)Icons.Default.PauseCircleFilled else Icons.Default.PlayCircleFilled,null,tint=Color(0xFFC5A6FF),modifier=Modifier.size(56.dp)) }
-                IconButton(onClick={playAt(currentIndex+1)},enabled=currentIndex>=0&&currentIndex<playable.lastIndex) { Icon(Icons.Default.SkipNext,null,tint=if(currentIndex>=0&&currentIndex<playable.lastIndex) Color.White else Color.Gray,modifier=Modifier.size(32.dp)) }
+                IconButton(onClick={player.seekToNextMediaItem()},enabled=player.isCommandAvailable(androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)) { Icon(Icons.Default.SkipNext,null,tint=if(currentIndex>=0&&currentIndex<playable.lastIndex) Color.White else Color.Gray,modifier=Modifier.size(32.dp)) }
                 IconButton(onClick={repeat=!repeat;player.repeatMode=if(repeat)ExoPlayer.REPEAT_MODE_ONE else ExoPlayer.REPEAT_MODE_OFF}) { Icon(Icons.Default.Repeat,null,tint=if(repeat) Color(0xFFC5A6FF) else Color.Gray) }
             }
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
@@ -239,7 +294,7 @@ private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnP
             if (file.category == MediaCategory.Videos) {
                 Button(onClick = {
                     val seconds=(player.currentPosition/1000).coerceAtLeast(0)
-                    val query="${file.name} scene at ${seconds}s"
+                    val query="${file.displayTitle} scene at ${seconds}s"
                     context.startActivity(Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://www.google.com/search?q="+android.net.Uri.encode(query))))
                 },modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF33205D))) { Icon(Icons.Default.Search,null);Spacer(Modifier.width(6.dp));Text("Search This Scene / Title") }
             }
@@ -249,7 +304,7 @@ private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnP
         listOf(15,30,45,60,90).forEach { minutes -> TextButton(onClick={sleepJob?.cancel();sleepJob=timerScope.launch{delay(minutes*60_000L);player.pause();isPlaying=false};sleepDialog=false},modifier=Modifier.fillMaxWidth()) { Text("Pause playback in ${minutes} minutes") } }
         TextButton(onClick={sleepJob?.cancel();sleepJob=null;sleepDialog=false},modifier=Modifier.fillMaxWidth()) { Text("Cancel timer") }
     }},confirmButton={TextButton(onClick={sleepDialog=false}){Text("Close")}})
-    if(queueOpen) AlertDialog(onDismissRequest={queueOpen=false},title={Text("Play queue")},text={Column(Modifier.heightIn(max=420.dp)){playable.forEachIndexed { index, item -> Text(item.name,maxLines=1,modifier=Modifier.fillMaxWidth().clickable{playAt(index);queueOpen=false}.padding(vertical=10.dp),color=if(item.uri==file.uri)Color(0xFF9B4DFF)else MaterialTheme.colorScheme.onSurface) } }},confirmButton={TextButton(onClick={queueOpen=false}){Text("Close")}})
+    if(queueOpen) AlertDialog(onDismissRequest={queueOpen=false},title={Text("Play queue")},text={Column(Modifier.heightIn(max=420.dp)){playable.forEachIndexed { index, item -> Text(item.displayTitle,maxLines=1,modifier=Modifier.fillMaxWidth().clickable{playAt(index);queueOpen=false}.padding(vertical=10.dp),color=if(item.uri==file.uri)Color(0xFF9B4DFF)else MaterialTheme.colorScheme.onSurface) } }},confirmButton={TextButton(onClick={queueOpen=false}){Text("Close")}})
     if(fullscreen) Dialog(onDismissRequest={fullscreen=false},properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             AndroidView(factory={ctx->PlayerView(ctx).apply{this.player=player;useController=true;resizeMode=aspect}},modifier=Modifier.fillMaxSize())
