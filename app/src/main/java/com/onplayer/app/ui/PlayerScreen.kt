@@ -1,6 +1,7 @@
 package com.onplayer.app.ui
 
 import android.content.Intent
+import kotlin.math.abs
 import android.view.ViewGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -37,7 +38,7 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
         }
         return
     }
-    if (file.category == MediaCategory.Images) { ImagePreview(file, nav); return }
+    if (file.category == MediaCategory.Images) { ImagePreview(file, files, vm, nav); return }
     val player = remember(file.uri) { ExoPlayer.Builder(context).build().apply { setMediaItem(MediaItem.fromUri(file.uri)); prepare(); playWhenReady = false } }
     DisposableEffect(player) { onDispose { player.release() } }
     var isPlaying by remember { mutableStateOf(false) }
@@ -77,19 +78,52 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
     }
 }
 
-@Composable private fun ImagePreview(file: MediaFile, nav: NavHostController) {
+@Composable private fun ImagePreview(file: MediaFile, files: List<MediaFile>, vm: OnPlayerViewModel, nav: NavHostController) {
     val context = LocalContext.current
-    var scale by remember { mutableFloatStateOf(1f) }
-    var rotation by remember { mutableFloatStateOf(0f) }
+    val imageFiles = remember(files) { files.filter { it.category == MediaCategory.Images } }
+    var current by remember(file.uri) { mutableStateOf(file) }
+    var scale by remember(file.uri) { mutableFloatStateOf(1f) }
+    var rotation by remember(file.uri) { mutableFloatStateOf(0f) }
+    var panX by remember(file.uri) { mutableFloatStateOf(0f) }
+    var panY by remember(file.uri) { mutableFloatStateOf(0f) }
+    var swipeHandled by remember(file.uri) { mutableStateOf(false) }
+    val index = imageFiles.indexOfFirst { it.uri == current.uri }
+    fun move(delta: Int) {
+        val next = (index + delta).coerceIn(0, imageFiles.lastIndex)
+        if (next != index && next >= 0) {
+            current = imageFiles[next]
+            vm.open(current)
+            scale = 1f; rotation = 0f; panX = 0f; panY = 0f; swipeHandled = false
+        }
+    }
     Column(Modifier.fillMaxSize().padding(bottom = 90.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().background(Color(0xAA211D36), RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp)), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
-            Text(file.name, color = Color.White, modifier = Modifier.weight(1f), maxLines = 1)
+            Column(Modifier.weight(1f)) {
+                Text(current.name, color = Color.White, maxLines = 1)
+                Text("${index + 1} / ${imageFiles.size} • ${current.sizeText}", color = Color(0xFFBDB6D6), style = MaterialTheme.typography.labelSmall)
+            }
+            IconButton(onClick = { scale = 1f; rotation = 0f; panX = 0f; panY = 0f }) { Icon(Icons.Default.FitScreen, null, tint = Color.White) }
             IconButton(onClick = { rotation += 90f }) { Icon(Icons.Default.RotateRight, null, tint = Color.White) }
             IconButton(onClick = {
-                try { val share = Intent(Intent.ACTION_SEND).apply { type = file.mime; putExtra(Intent.EXTRA_STREAM, file.uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }; context.startActivity(Intent.createChooser(share, "Share image")) } catch (_: Exception) { }
+                try { val share = Intent(Intent.ACTION_SEND).apply { type = current.mime; putExtra(Intent.EXTRA_STREAM, current.uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }; context.startActivity(Intent.createChooser(share, "Share image")) } catch (_: Exception) { }
             }) { Icon(Icons.Default.Share, null, tint = Color.White) }
         }
-        AndroidView(factory = { android.widget.ImageView(it).apply { scaleType = android.widget.ImageView.ScaleType.FIT_CENTER; setImageURI(file.uri) } }, modifier = Modifier.fillMaxSize().background(Color.Black).pointerInput(Unit) { detectTransformGestures { _, _, zoom, rot -> scale = (scale * zoom).coerceIn(1f, 6f); rotation += rot } }.graphicsLayer { scaleX = scale; scaleY = scale; rotationZ = rotation })
+        Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black), contentAlignment = Alignment.Center) {
+            AndroidView(factory = { android.widget.ImageView(it).apply { scaleType = android.widget.ImageView.ScaleType.FIT_CENTER } }, update = { it.setImageURI(current.uri) }, modifier = Modifier.fillMaxSize().pointerInput(current.uri) {
+                detectTransformGestures { _, pan, zoom, rot ->
+                    scale = (scale * zoom).coerceIn(1f, 6f)
+                    rotation += rot
+                    if (scale > 1.05f) { panX += pan.x; panY += pan.y }
+                    else if (abs(pan.x) > 65f && !swipeHandled) { move(if (pan.x > 0) -1 else 1); swipeHandled = true }
+                    if (abs(pan.x) < 8f) swipeHandled = false
+                }
+            }.graphicsLayer { scaleX = scale; scaleY = scale; rotationZ = rotation; translationX = panX; translationY = panY })
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { move(-1) }, enabled = index > 0) { Icon(Icons.Default.ChevronLeft, "Previous image", tint = if (index > 0) Color.White else Color.Gray) }
+            Text(current.name, color = Color(0xFFC7C0DF), maxLines = 1, style = MaterialTheme.typography.labelMedium)
+            IconButton(onClick = { move(1) }, enabled = index >= 0 && index < imageFiles.lastIndex) { Icon(Icons.Default.ChevronRight, "Next image", tint = if (index >= 0 && index < imageFiles.lastIndex) Color.White else Color.Gray) }
+        }
     }
 }
