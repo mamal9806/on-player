@@ -121,13 +121,15 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
     }
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
     val isAmoled = themeMode == "AMOLED Black"
-    val dark = isAmoled || (themeMode != "Light" && (themeMode != "System" || systemDark))
+    val isAccentTheme = themeMode in setOf("Red", "Blue", "Green")
+    val accent = when (themeMode) { "Red" -> Color(0xFFFF4D5E); "Blue" -> Color(0xFF3D8BFF); "Green" -> Color(0xFF20C997); else -> Purple }
+    val dark = isAccentTheme || isAmoled || (themeMode != "Light" && (themeMode != "System" || systemDark))
     val background = when { isAmoled -> Color.Black; dark -> Deep; else -> Color(0xFFF5F4FA) }
     val foreground = if (dark) Color.White else Color(0xFF22232E)
     val muted = if (dark) Subtle else Color(0xFF6E7081)
     val surface = if (isAmoled) Color(0xFF090909) else if (dark) CardDark else Color.White
-    val colors = if (dark) darkColorScheme(primary=Purple, background=background, surface=surface, onSurface=foreground, onBackground=foreground)
-        else lightColorScheme(primary=Color(0xFF7B50D7), background=background, surface=surface, onSurface=foreground, onBackground=foreground)
+    val colors = if (dark) darkColorScheme(primary=accent, background=background, surface=surface, onSurface=foreground, onBackground=foreground)
+        else lightColorScheme(primary=accent, background=background, surface=surface, onSurface=foreground, onBackground=foreground)
 
     DisposableEffect(controller, files) {
         val listener = object : Player.Listener {
@@ -429,7 +431,7 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
             colors=CardDefaults.cardColors(containerColor=if(dark) CardDark else Color.White)
         ) {
             Column(Modifier.padding(16.dp)) {
-                listOf("Dark","Light","System","AMOLED Black").forEach { mode ->
+                listOf("Dark","Light","System","AMOLED Black","Red","Blue","Green").forEach { mode ->
                     Row(
                         Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
                             .clickable { vm.setTheme(mode) }.padding(vertical=13.dp,horizontal=4.dp),
@@ -440,7 +442,7 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
                             contentDescription=null,tint=Purple
                         )
                         Text(mode,color=fg,modifier=Modifier.weight(1f).padding(start=12.dp))
-                        if(theme==mode) Icon(Icons.Default.CheckCircle,contentDescription="Selected",tint=Purple)
+                        if(theme==mode) Icon(Icons.Default.CheckCircle,contentDescription="Selected",tint=when(mode) { "Red" -> Color(0xFFFF4D5E); "Blue" -> Color(0xFF3D8BFF); "Green" -> Color(0xFF20C997); else -> Purple })
                     }
                 }
             }
