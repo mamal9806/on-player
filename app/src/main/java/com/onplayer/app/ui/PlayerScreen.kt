@@ -246,6 +246,15 @@ private fun formatPlayerTime(ms: Long): String {
     var panY by remember(file.uri) { mutableFloatStateOf(0f) }
     var swipeHandled by remember(file.uri) { mutableStateOf(false) }
     val index = imageFiles.indexOfFirst { it.uri == current.uri }
+    val resolution by produceState("Loading dimensions…", current.uri) {
+        value = withContext(Dispatchers.IO) {
+            try {
+                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                context.contentResolver.openInputStream(current.uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+                if (options.outWidth > 0 && options.outHeight > 0) "${options.outWidth} × ${options.outHeight}" else "Unknown dimensions"
+            } catch (_: Exception) { "Unknown dimensions" }
+        }
+    }
     fun move(delta: Int) {
         if (imageFiles.isEmpty() || index < 0) return
         val next = (index + delta).coerceIn(0, imageFiles.lastIndex)
@@ -260,13 +269,16 @@ private fun formatPlayerTime(ms: Long): String {
             IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
             Column(Modifier.weight(1f)) {
                 Text(current.name, color = Color.White, maxLines = 1)
-                Text("${index + 1} / ${imageFiles.size} • ${current.sizeText}", color = Color(0xFFBDB6D6), style = MaterialTheme.typography.labelSmall)
+                Text("${index + 1} / ${imageFiles.size} • ${resolution} • ${current.sizeText}", color = Color(0xFFBDB6D6), style = MaterialTheme.typography.labelSmall)
             }
             IconButton(onClick = { scale = 1f; rotation = 0f; panX = 0f; panY = 0f }) { Icon(Icons.Default.FitScreen, null, tint = Color.White) }
             IconButton(onClick = { rotation += 90f }) { Icon(Icons.Default.RotateRight, null, tint = Color.White) }
             IconButton(onClick = {
                 try { val share = Intent(Intent.ACTION_SEND).apply { type = current.mime; putExtra(Intent.EXTRA_STREAM, current.uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }; context.startActivity(Intent.createChooser(share, "Share image")) } catch (_: Exception) { }
             }) { Icon(Icons.Default.Share, null, tint = Color.White) }
+            IconButton(onClick = {
+                try { val open = Intent(Intent.ACTION_VIEW).setDataAndType(current.uri, current.mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); context.startActivity(Intent.createChooser(open, "Open photo with")) } catch (_: Exception) { }
+            }) { Icon(Icons.Default.OpenInNew, null, tint = Color.White) }
         }
         Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black), contentAlignment = Alignment.Center) {
             AndroidView(factory = { android.widget.ImageView(it).apply { scaleType = android.widget.ImageView.ScaleType.FIT_CENTER } }, update = { it.setImageURI(current.uri) }, modifier = Modifier.fillMaxSize().pointerInput(current.uri) {
