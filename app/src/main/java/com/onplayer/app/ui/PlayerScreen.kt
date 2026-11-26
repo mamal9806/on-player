@@ -55,6 +55,23 @@ import androidx.media3.session.MediaController
 import com.onplayer.app.data.MediaFile
 import com.onplayer.app.ui.UserPlaylist
 
+
+private fun extractArtworkAccent(bitmap: Bitmap?): Color {
+    if (bitmap == null || bitmap.isRecycled) return Color(0xFFE34B62)
+    val w = bitmap.width; val h = bitmap.height
+    val step = maxOf(1, minOf(w, h) / 24)
+    var best = 0; var bestScore = -1f
+    for (y in step until h step step) for (x in step until w step step) {
+        val pixel = bitmap.getPixel(x, y)
+        val hsv = FloatArray(3); android.graphics.Color.colorToHSV(pixel, hsv)
+        if (hsv[1] < 0.25f || hsv[2] < 0.18f || hsv[2] > 0.96f) continue
+        val score = hsv[1] * (0.5f + hsv[2] * 0.5f)
+        if (score > bestScore) { bestScore = score; best = pixel }
+    }
+    if (bestScore < 0f) return Color(0xFFE34B62)
+    return Color(best).copy(alpha = 1f)
+}
+
 private data class TrackArtwork(val bitmap: Bitmap?, val title: String, val artist: String, val album: String)
 
 @Composable
@@ -130,6 +147,10 @@ fun PlayerScreen(
     }
 
     val artwork = rememberTrackArtwork(file)
+    val artworkAccent = remember(artwork.bitmap) { extractArtworkAccent(artwork.bitmap) }
+    val dynamicAccent by androidx.compose.animation.animateColorAsState(artworkAccent, animationSpec = tween(450), label = "cover accent")
+    val dynamicDeep = remember(dynamicAccent) { dynamicAccent.copy(red = dynamicAccent.red * 0.30f, green = dynamicAccent.green * 0.30f, blue = dynamicAccent.blue * 0.30f) }
+    val dynamicSoft = remember(dynamicAccent) { dynamicAccent.copy(alpha = 0.55f) }
     val favorites by vm.favorites.collectAsState()
     val isFavorite = file.uri.toString() in favorites
     val queue = remember(files, file.uri) {
@@ -329,7 +350,7 @@ fun PlayerScreen(
         )
     }
 
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF090A0F), Color(0xFF10131C), Color(0xFF050609))))) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(dynamicDeep, Color(0xFF10131C), Color(0xFF050609))))) {
 
         Column(
             Modifier.fillMaxSize()
@@ -352,7 +373,7 @@ fun PlayerScreen(
                     Modifier.weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("ON PLAYER", color = Color(0xFFFF536A), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.4.sp)
+                    Text("ON PLAYER", color = dynamicAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.4.sp)
                     Text("Now Playing", color = secondary, fontSize = 12.sp)
                 }
                 Box {
@@ -408,7 +429,7 @@ fun PlayerScreen(
                     Modifier.fillMaxSize(0.88f)
                         .graphicsLayer { rotationZ = if (playing) discRotation else 0f }
                         .clip(CircleShape)
-                        .background(Brush.radialGradient(listOf(Color(0xFF454650), Color(0xFF17181D), Color(0xFF08090D))))
+                        .background(Brush.radialGradient(listOf(dynamicSoft, dynamicDeep, Color(0xFF08090D))))
                         .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
@@ -418,7 +439,7 @@ fun PlayerScreen(
                             val radius = size.minDimension * (0.28f + i * 0.025f)
                             drawCircle(Color.White.copy(alpha = if (i % 3 == 0) 0.13f else 0.035f), radius, center, style = Stroke(width = size.minDimension * 0.003f))
                         }
-                        drawCircle(Color(0xFFB8BAC4).copy(alpha = 0.24f), size.minDimension * 0.49f, center, style = Stroke(width = size.minDimension * 0.012f))
+                        drawCircle(dynamicAccent.copy(alpha = 0.32f), size.minDimension * 0.49f, center, style = Stroke(width = size.minDimension * 0.012f))
                     }
                     Box(
                         Modifier.fillMaxSize(0.42f).clip(CircleShape)
@@ -590,21 +611,21 @@ private fun GlassIconButton(
         Icon(
             icon,
             contentDescription = description,
-            tint = if (active) Color(0xFFFF6B83) else Color.White.copy(alpha = 0.94f),
+            tint = if (active) dynamicAccent else Color.White.copy(alpha = 0.94f),
             modifier = Modifier.size(if (diameter >= 50.dp) 28.dp else 21.dp)
         )
     }
 }
 
 @Composable
-private fun GlassPlayButton(playing: Boolean, onClick: () -> Unit) {
+private fun GlassPlayButton(playing: Boolean, accent: Color, onClick: () -> Unit) {
     Box(
         Modifier.size(76.dp)
             .shadow(20.dp, CircleShape, clip = false)
             .clip(CircleShape)
             .background(
                 Brush.linearGradient(
-                    listOf(Color(0xFFFFF4F6), Color(0xFFFFA0B1), Color(0xFFFF536A))
+                    listOf(Color.White.copy(alpha = 0.95f), accent.copy(alpha = 0.80f), accent)
                 )
             )
             .border(
@@ -623,7 +644,7 @@ private fun GlassPlayButton(playing: Boolean, onClick: () -> Unit) {
         Icon(
             if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
             contentDescription = if (playing) "Pause" else "Play",
-            tint = Color(0xFF5B1324),
+            tint = accent.copy(red = (accent.red * 0.28f).coerceIn(0f,1f), green = (accent.green * 0.28f).coerceIn(0f,1f), blue = (accent.blue * 0.28f).coerceIn(0f,1f),
             modifier = Modifier.size(39.dp)
         )
     }
@@ -689,7 +710,7 @@ private fun LiquidSeekBar(
         if (progressWidth > 0f) {
             drawRoundRect(
                 brush = Brush.horizontalGradient(
-                    listOf(Color(0xFFF8F2FF), Color(0xFFD9B9FF), Color(0xFFBDA0F2))
+                    listOf(Color.White, accent.copy(alpha = 0.85f), accent)
                 ),
                 topLeft = Offset(0f, centerY - radius),
                 size = Size(progressWidth, trackHeight),
