@@ -136,9 +136,16 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
                 vm.clearPlayNextRequest(next)
             } else {
                 if (currentUri != null) {
-                    val oldIndex = controller.mediaItems.indexOfFirst { it.localConfiguration?.uri == next.uri }
-                    if (oldIndex >= 0) controller.removeMediaItem(oldIndex)
-                    val activeIndex = controller.mediaItems.indexOfFirst { it.localConfiguration?.uri == currentUri }
+                    var existingIndex = -1
+                    for (index in 0 until controller.mediaItemCount) {
+                        if (controller.getMediaItemAt(index).localConfiguration?.uri == next.uri) {
+                            existingIndex = index
+                            break
+                        }
+                    }
+                    if (existingIndex >= 0) controller.removeMediaItem(existingIndex)
+
+                    val activeIndex = controller.currentMediaItemIndex
                     val insertAt = if (activeIndex >= 0) activeIndex + 1 else controller.mediaItemCount
                     val nextItem = MediaItem.Builder().setUri(next.uri).setMediaMetadata(
                         MediaMetadata.Builder()
