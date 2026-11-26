@@ -1,0 +1,29 @@
+# Merge into app/src/main/AndroidManifest.xml (do not replace the full file)
+
+Add these permissions inside <manifest>:
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+Add this service inside the existing <application>:
+<service
+    android:name="com.onplayer.app.media.OnPlayerMediaService"
+    android:exported="true"
+    android:foregroundServiceType="mediaPlayback">
+    <intent-filter>
+        <action android:name="androidx.media3.session.MediaSessionService" />
+    </intent-filter>
+</service>
+
+For PiP, add to MainActivity's existing activity tag:
+android:supportsPictureInPicture="true"
+android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize"
+
+## Gradle dependency
+Add to app/build.gradle.kts dependencies:
+implementation("androidx.media3:media3-session:1.4.1")
+
+## Status / not yet integrated
+This branch only provides the MediaSessionService foundation. The current PlayerScreen still uses a local ExoPlayer.
+To finish background playback/notification, PlayerScreen must be connected through MediaController and the local player removed.
+Mini-player, PiP UI, photo reader upgrades, file-category fixes and a successful APK build are not included yet.
