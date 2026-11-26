@@ -1,15 +1,15 @@
 package com.onplayer.app.data
 
 import android.content.Context
-import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.map
 
 val Context.onPlayerDataStore by preferencesDataStore(name = "onplayer_preferences")
 val FAVORITES_KEY = stringPreferencesKey("favorites")
 val THEME_KEY = stringPreferencesKey("theme")
+val PLAYLISTS_KEY = stringPreferencesKey("playlists_json")
+val CUSTOM_TITLES_KEY = stringPreferencesKey("custom_track_titles_json")
 
 val LAST_PLAYED_URI_KEY = stringPreferencesKey("last_played_uri")
 val LAST_PLAYED_NAME_KEY = stringPreferencesKey("last_played_name")
