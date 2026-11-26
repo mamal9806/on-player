@@ -350,7 +350,20 @@ fun PlayerScreen(
         )
     }
 
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(dynamicDeep, Color(0xFF10131C), Color(0xFF050609))))) {
+    Box(Modifier.fillMaxSize()) {
+        // Album artwork wallpaper: blurred and softly tinted behind the player controls.
+        artwork.bitmap?.let { bitmap ->
+            Image(
+                bitmap.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().blur(42.dp).graphicsLayer { scaleX = 1.22f; scaleY = 1.22f },
+                contentScale = ContentScale.Crop
+            )
+        }
+        val ambientPulse = rememberInfiniteTransition(label = "ambient wallpaper")
+            .animateFloat(0.22f, 0.38f, infiniteRepeatable(tween(3200), RepeatMode.Reverse), label = "ambient pulse").value
+        Box(Modifier.fillMaxSize().background(dynamicDeep.copy(alpha = ambientPulse)))
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(dynamicDeep.copy(alpha = 0.48f), Color(0xFF10131C).copy(alpha = 0.78f), Color(0xFF050609).copy(alpha = 0.96f))))) {
 
         Column(
             Modifier.fillMaxSize()
@@ -426,7 +439,7 @@ fun PlayerScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Box(
-                    Modifier.fillMaxSize(0.88f)
+                    Modifier.fillMaxHeight(0.88f).aspectRatio(1f)
                         .graphicsLayer { rotationZ = if (playing) discRotation else 0f }
                         .clip(CircleShape)
                         .background(Brush.radialGradient(listOf(dynamicSoft, dynamicDeep, Color(0xFF08090D))))
