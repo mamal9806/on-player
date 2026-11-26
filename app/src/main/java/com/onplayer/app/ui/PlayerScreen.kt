@@ -514,6 +514,7 @@ private fun LiquidSeekBar(
     val safeDuration = durationMs.coerceAtLeast(1L)
     val fraction = (positionMs.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f)
     var widthPx by remember { mutableFloatStateOf(1f) }
+    var dragPosition by remember { mutableLongStateOf(positionMs.coerceIn(0L, safeDuration)) }
     val latestOnSeek by rememberUpdatedState(onSeek)
     val latestOnSeekFinished by rememberUpdatedState(onSeekFinished)
 
@@ -529,20 +530,23 @@ private fun LiquidSeekBar(
             .pointerInput(safeDuration, widthPx) {
                 detectTapGestures { offset ->
                     val target = positionAt(offset.x)
+                    dragPosition = target
                     latestOnSeek(target)
                     latestOnSeekFinished(target)
                 }
             }
             .pointerInput(safeDuration, widthPx) {
                 detectDragGestures(
-                    onDragStart = { offset -> latestOnSeek(positionAt(offset.x)) },
+                    onDragStart = { offset ->
+                        dragPosition = positionAt(offset.x)
+                        latestOnSeek(dragPosition)
+                    },
                     onDrag = { change, _ ->
                         change.consume()
-                        latestOnSeek(positionAt(change.position.x))
+                        dragPosition = positionAt(change.position.x)
+                        latestOnSeek(dragPosition)
                     },
-                    onDragEnd = {
-                        latestOnSeekFinished((fraction * safeDuration.toFloat()).toLong())
-                    }
+                    onDragEnd = { latestOnSeekFinished(dragPosition) }
                 )
             }
     ) {
