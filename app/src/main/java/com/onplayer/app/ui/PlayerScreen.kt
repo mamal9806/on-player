@@ -48,6 +48,9 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
     }
     if (file.category == MediaCategory.Images) { ImagePreview(file, files, vm, nav); return }
     val player = remember(file.uri) { ExoPlayer.Builder(context).build().apply { setMediaItem(MediaItem.fromUri(file.uri)); prepare(); playWhenReady = false } }
+    val timerScope = rememberCoroutineScope()
+    var sleepDialog by remember { mutableStateOf(false) }
+    var sleepJob by remember(file.uri) { mutableStateOf<Job?>(null) }
     DisposableEffect(player) { onDispose { sleepJob?.cancel(); player.release() } }
     val playable = remember(files) { files.filter { it.isPlayable } }
     val currentIndex = playable.indexOfFirst { it.uri == file.uri }
@@ -63,9 +66,6 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
     var fullscreen by remember(file.uri) { mutableStateOf(false) }
     var queueOpen by remember(file.uri) { mutableStateOf(false) }
     var playerView by remember { mutableStateOf<PlayerView?>(null) }
-    val timerScope = rememberCoroutineScope()
-    var sleepDialog by remember { mutableStateOf(false) }
-    var sleepJob by remember(file.uri) { mutableStateOf<Job?>(null) }
     LaunchedEffect(player) {
         while (true) {
             position = player.currentPosition.coerceAtLeast(0L).toFloat()
