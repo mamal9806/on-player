@@ -3,9 +3,15 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.datastore.preferences.core.edit
+import android.net.Uri
 import com.onplayer.app.data.FAVORITES_KEY
+import com.onplayer.app.data.LAST_PLAYED_URI_KEY
+import com.onplayer.app.data.LAST_PLAYED_NAME_KEY
+import com.onplayer.app.data.LAST_PLAYED_MIME_KEY
+import com.onplayer.app.data.LAST_PLAYED_CATEGORY_KEY
 import com.onplayer.app.data.THEME_KEY
 import com.onplayer.app.data.MediaFile
+import com.onplayer.app.data.MediaCategory
 import com.onplayer.app.data.MediaRepository
 import com.onplayer.app.data.onPlayerDataStore
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +26,10 @@ class OnPlayerViewModel(app: Application) : AndroidViewModel(app) {
     val files: StateFlow<List<MediaFile>> = _files.asStateFlow()
     private val _current = MutableStateFlow<MediaFile?>(null)
     val current: StateFlow<MediaFile?> = _current.asStateFlow()
+    private val _lastPlayed = MutableStateFlow<MediaFile?>(null)
+    val lastPlayed: StateFlow<MediaFile?> = _lastPlayed.asStateFlow()
+    private val _isPlaying = MutableStateFlow(false)
+    val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
     private val _playNextRequest = MutableStateFlow<MediaFile?>(null)
     val playNextRequest: StateFlow<MediaFile?> = _playNextRequest.asStateFlow()
     private val _search = MutableStateFlow("")
@@ -37,6 +47,18 @@ class OnPlayerViewModel(app: Application) : AndroidViewModel(app) {
             app.onPlayerDataStore.data.collect { prefs ->
                 _favorites.value = prefs[FAVORITES_KEY].orEmpty().split("\\n").filter { it.isNotBlank() }.toSet()
                 _themeMode.value = prefs[THEME_KEY] ?: "Dark"
+                val savedUri = prefs[LAST_PLAYED_URI_KEY]
+                if (!savedUri.isNullOrBlank()) {
+                    val savedName = prefs[LAST_PLAYED_NAME_KEY] ?: "Last played"
+                    val savedMime = prefs[LAST_PLAYED_MIME_KEY] ?: "audio/*"
+                    val savedCategory = runCatching {
+                        MediaCategory.valueOf(prefs[LAST_PLAYED_CATEGORY_KEY] ?: MediaCategory.Audio.name)
+                    }.getOrDefault(MediaCategory.Audio)
+                    val uri = Uri.parse(savedUri)
+                    _lastPlayed.value = _files.value.firstOrNull { it.uri == uri }
+                        ?: MediaFile(uri.hashCode().toLong(), savedName, uri, savedMime, 0L,
+                            System.currentTimeMillis() / 1000L, savedCategory)
+                }
             }
         }
     }
@@ -46,12 +68,35 @@ class OnPlayerViewModel(app: Application) : AndroidViewModel(app) {
         try {
             val found = repo.scan()
             _files.value = found
+            _lastPlayed.value?.let { saved ->
+                found.firstOrNull { it.uri == saved.uri }?.let { _lastPlayed.value = it }
+            }
             if (found.isEmpty()) _scanError.value = "No media found. Check storage permissions or use Browse device files."
         } catch (e: Exception) {
             _scanError.value = e.message ?: "Could not scan storage."
         } finally { _scanning.value = false }
     }
-    fun open(file: MediaFile) { _current.value = file }
+    fun open(file: MediaFile) {
+        _current.value = file
+        if (file.category == MediaCategory.Audio) rememberLastPlayed(file)
+    }
+
+    fun rememberLastPlayed(file: MediaFile) {
+        if (file.category != MediaCategory.Audio) return
+        _lastPlayed.value = file
+        viewModelScope.launch {
+            getApplication<Application>().onPlayerDataStore.edit { prefs ->
+                prefs[LAST_PLAYED_URI_KEY] = file.uri.toString()
+                prefs[LAST_PLAYED_NAME_KEY] = file.name
+                prefs[LAST_PLAYED_MIME_KEY] = file.mime
+                prefs[LAST_PLAYED_CATEGORY_KEY] = file.category.name
+            }
+        }
+    }
+
+    fun setPlaybackActive(active: Boolean) {
+        _isPlaying.value = active
+    }
 
     // A queue request is consumed by the Media3 player screen and inserted
     // immediately after the currently playing item.
