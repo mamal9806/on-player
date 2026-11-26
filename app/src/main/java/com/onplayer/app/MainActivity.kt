@@ -69,14 +69,14 @@ class MainActivity:ComponentActivity(){ override fun onCreate(savedInstanceState
 @Composable private fun BottomBar(nav:NavHostController,playing:Boolean,modifier:Modifier=Modifier,onNav:(String)->Unit){
     val route=nav.currentBackStackEntryAsState().value?.destination?.route
     Box(modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=12.dp).background(Color(0xE8171727),RoundedCornerShape(32.dp)).padding(horizontal=8.dp,vertical=8.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceAround,verticalAlignment=Alignment.Center) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceAround,verticalAlignment=Alignment.CenterVertically) {
             BottomItem("Home",Icons.Default.Home,route=="home"){onNav("home")}; BottomItem("Library",Icons.Default.Folder,route=="library"){onNav("library")}
             Box(Modifier.size(64.dp).background(Brush.linearGradient(listOf(Purple,Color(0xFF5D2CDA))),RoundedCornerShape(50)).clickable{onNav("player")},contentAlignment=Alignment.Center){ Icon(Icons.Default.PlayArrow,null,tint=Color.White,modifier=Modifier.size(36.dp)) }
             BottomItem("Playlist",Icons.Default.QueueMusic,route=="playlist"){onNav("playlist")}; BottomItem("Settings",Icons.Default.Settings,route=="settings"){onNav("settings")}
         }
     }
 }
-@Composable private fun BottomItem(label:String,icon:androidx.compose.ui.graphics.vector.ImageVector,active:Boolean,click:()->Unit){Column(Modifier.clickable{click()}.padding(horizontal=7.dp),horizontalAlignment=Alignment.Center){Icon(icon,null,tint=if(active) Purple else Muted,modifier=Modifier.size(24.dp));Text(label,color=if(active) Purple else Muted,fontSize=11.sp)} }
+@Composable private fun BottomItem(label:String,icon:androidx.compose.ui.graphics.vector.ImageVector,active:Boolean,click:()->Unit){Column(Modifier.clickable{click()}.padding(horizontal=7.dp),horizontalAlignment=Alignment.CenterHorizontally){Icon(icon,null,tint=if(active) Purple else Muted,modifier=Modifier.size(24.dp));Text(label,color=if(active) Purple else Muted,fontSize=11.sp)} }
 @Composable private fun HomeScreen(files:List<MediaFile>,loading:Boolean,search:String,vm:OnPlayerViewModel,nav:NavHostController,favorites:Set<String>){
     val counts=MediaCategory.values().associateWith{cat->files.count{it.category==cat}}
     Column(Modifier.fillMaxSize().padding(bottom=92.dp).padding(horizontal=16.dp)) {
