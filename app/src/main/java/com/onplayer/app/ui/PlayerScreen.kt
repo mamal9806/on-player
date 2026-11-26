@@ -101,6 +101,8 @@ fun PlayerScreen(file:MediaFile?,files:List<MediaFile>,vm:OnPlayerViewModel,play
             player.setMediaItems(items,queue.indexOfFirst{it.uri==file.uri}.coerceAtLeast(0),0L)
             player.prepare()
             player.play()
+        } else {
+            player.play()
         }
     }
     LaunchedEffect(player,playing) {
