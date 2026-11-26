@@ -30,7 +30,6 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
@@ -127,8 +126,10 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
             }
             IconButton(onClick = { queueOpen = true }) { Icon(Icons.Default.QueueMusic, null, tint = Color.White) }
             IconButton(onClick = { sleepDialog = true }) { Icon(Icons.Default.Timer, null, tint = Color.White) }
-            IconButton(onClick = { fullscreen = true }) { Icon(Icons.Default.Fullscreen, null, tint = Color.White) }
-            IconButton(onClick = { rotation = (rotation + 90f) % 360f }) { Icon(Icons.Default.ScreenRotation, null, tint = Color.White) }
+            if(file.category!=MediaCategory.Audio) {
+                IconButton(onClick = { fullscreen = true }) { Icon(Icons.Default.Fullscreen, null, tint = Color.White) }
+                IconButton(onClick = { rotation = (rotation + 90f) % 360f }) { Icon(Icons.Default.ScreenRotation, null, tint = Color.White) }
+            }
         }
         if(file.category==MediaCategory.Audio) {
             Column(Modifier.fillMaxWidth().weight(1f).background(Brush.verticalGradient(listOf(Color(0xFF29213F),Color(0xFF090910))),RoundedCornerShape(26.dp)).padding(18.dp),horizontalAlignment=Alignment.Center,verticalArrangement=Arrangement.Center) {
@@ -173,10 +174,7 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
                 Button(onClick = {
                     val seconds=(player.currentPosition/1000).coerceAtLeast(0)
                     val query="${file.name} scene at ${seconds}s"
-                    val intent=Intent(Intent.ACTION_WEB_SEARCH).putExtra(android.app.SearchManager.QUERY,query)
-                    try { context.startActivity(intent) } catch (_: Exception) {
-                        context.startActivity(Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://www.google.com/search?q="+android.net.Uri.encode(query))))
-                    }
+                    context.startActivity(Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://www.google.com/search?q="+android.net.Uri.encode(query))))
                 },modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF33205D))) { Icon(Icons.Default.Search,null);Spacer(Modifier.width(6.dp));Text("Search This Scene / Title") }
             }
         }
