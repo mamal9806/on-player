@@ -61,14 +61,14 @@ class MainActivity:ComponentActivity(){ override fun onCreate(savedInstanceState
                 composable("category/{category}"){ entry -> val cat=MediaCategory.valueOf(entry.arguments?.getString("category") ?: "Others"); CategoryScreen(files.filter{it.category==cat},cat,vm,nav) }
                 composable("search"){ SearchScreen(files,vm,nav) }
             }
-            BottomBar(nav,current!=null) { route -> nav.navigate(route){ launchSingleTop=true } }
+            BottomBar(nav,current!=null,Modifier.align(Alignment.BottomCenter)) { route -> nav.navigate(route){ launchSingleTop=true } }
         }
     }
 }
 
-@Composable private fun BottomBar(nav:NavHostController,playing:Boolean,onNav:(String)->Unit){
+@Composable private fun BottomBar(nav:NavHostController,playing:Boolean,modifier:Modifier=Modifier,onNav:(String)->Unit){
     val route=nav.currentBackStackEntryAsState().value?.destination?.route
-    Box(Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(horizontal=12.dp,vertical=12.dp).background(Color(0xE8171727),RoundedCornerShape(32.dp)).padding(horizontal=8.dp,vertical=8.dp)) {
+    Box(modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=12.dp).background(Color(0xE8171727),RoundedCornerShape(32.dp)).padding(horizontal=8.dp,vertical=8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceAround,verticalAlignment=Alignment.Center) {
             BottomItem("Home",Icons.Default.Home,route=="home"){onNav("home")}; BottomItem("Library",Icons.Default.Folder,route=="library"){onNav("library")}
             Box(Modifier.size(64.dp).background(Brush.linearGradient(listOf(Purple,Color(0xFF5D2CDA))),RoundedCornerShape(50)).clickable{onNav("player")},contentAlignment=Alignment.Center){ Icon(Icons.Default.PlayArrow,null,tint=Color.White,modifier=Modifier.size(36.dp)) }
