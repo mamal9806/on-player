@@ -105,7 +105,7 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
             }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
                 Text("Speed",color=Color(0xFFBDB6D6),fontSize=12.sp)
-                Row { listOf(.75f,1f,1.25f,1.5f,2f).forEach { v -> Text("${v}x",color=if(speed==v)Color(0xFFC5A6FF)else Color.Gray,modifier=Modifier.padding(horizontal=4.dp).clickable{speed=v;player.setPlaybackSpeed(v),},fontSize=12.sp) } }
+                Row { listOf(.75f,1f,1.25f,1.5f,2f).forEach { v -> Text("${v}x",color=if(speed==v)Color(0xFFC5A6FF)else Color.Gray,modifier=Modifier.padding(horizontal=4.dp).clickable{speed=v;player.setPlaybackSpeed(v)},fontSize=12.sp) } }
             }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
                 Text("Aspect ratio",color=Color(0xFFBDB6D6),fontSize=12.sp)
@@ -126,7 +126,7 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
     if(queueOpen) AlertDialog(onDismissRequest={queueOpen=false},title={Text("Play queue")},text={Column(Modifier.heightIn(max=420.dp)){playable.forEachIndexed { index, item -> Text(item.name,maxLines=1,modifier=Modifier.fillMaxWidth().clickable{playAt(index);queueOpen=false}.padding(vertical=10.dp),color=if(item.uri==file.uri)Color(0xFF9B4DFF)else MaterialTheme.colorScheme.onSurface) } }},confirmButton={TextButton(onClick={queueOpen=false}){Text("Close")}})
     if(fullscreen) Dialog(onDismissRequest={fullscreen=false},properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Box(Modifier.fillMaxSize().background(Color.Black)) {
-            AndroidView(factory={ctx->PlayerView(ctx).apply{player=this@PlayerScreen.playerView?.player ?: player;useController=true;resizeMode=aspect}},modifier=Modifier.fillMaxSize())
+            AndroidView(factory={ctx->PlayerView(ctx).apply{this.player=player;useController=true;resizeMode=aspect}},modifier=Modifier.fillMaxSize())
             IconButton(onClick={fullscreen=false},modifier=Modifier.align(Alignment.TopEnd).padding(12.dp).background(Color(0x88202020),RoundedCornerShape(50))) { Icon(Icons.Default.FullscreenExit,null,tint=Color.White) }
         }
     }
