@@ -18,6 +18,8 @@ class OnPlayerService : MediaSessionService() {
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
             .build()
         val exoPlayer = ExoPlayer.Builder(this).build().apply {
+            // Let Media3 request permanent music audio focus whenever play() is called.
+            // This is the Android-supported handoff that asks other media apps to pause or duck.
             setAudioAttributes(musicAudioAttributes, true)
             setHandleAudioBecomingNoisy(true)
         }
