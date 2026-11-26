@@ -9,6 +9,8 @@ import android.os.Build
 import android.os.Bundle
 import android.util.LruCache
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
 import android.media.MediaMetadataRetriever
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -47,6 +49,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import android.content.ComponentName
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.onplayer.app.data.MediaCategory
@@ -77,7 +84,27 @@ class MainActivity : ComponentActivity() {
     val scanning by vm.scanning.collectAsState()
     val scanError by vm.scanError.collectAsState()
     val favorites by vm.favorites.collectAsState()
+    val lastPlayed by vm.lastPlayed.collectAsState()
+    val playbackActive by vm.isPlaying.collectAsState()
     val themeMode by vm.themeMode.collectAsState()
+    val playbackController = rememberAppMediaController()
+    DisposableEffect(playbackController, files) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                vm.setPlaybackActive(isPlaying)
+            }
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                val uri = mediaItem?.localConfiguration?.uri ?: return
+                files.firstOrNull { it.uri == uri }?.let(vm::rememberLastPlayed)
+            }
+        }
+        playbackController?.addListener(listener)
+        playbackController?.currentMediaItem?.localConfiguration?.uri?.let { uri ->
+            files.firstOrNull { it.uri == uri }?.let(vm::rememberLastPlayed)
+        }
+        vm.setPlaybackActive(playbackController?.isPlaying == true)
+        onDispose { playbackController?.removeListener(listener) }
+    }
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
     val light = themeMode == "Light" || (themeMode == "System" && !systemDark)
     val bg = if (light) Color(0xFFF4F4F8) else if (themeMode == "AMOLED Black") Color.Black else DarkBg
@@ -94,7 +121,7 @@ class MainActivity : ComponentActivity() {
     MaterialTheme(colorScheme=colors) {
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(if (light) Color(0xFFF7F5FF) else Color(0xFF11101D), bg, if (light) Color(0xFFEDE9FF) else Color(0xFF08080F))))) {
             NavHost(navController=nav, startDestination="home", modifier=Modifier.fillMaxSize()) {
-                composable("home") { HomeScreen(files, scanning, scanError, vm, nav, favorites, light, textColor, muted, card) }
+                composable("home") { HomeScreen(files, scanning, scanError, vm, nav, favorites, lastPlayed, playbackActive, light, textColor, muted, card) }
                 composable("library") { LibraryScreen(files, vm, nav, favorites, light, textColor, muted) }
                 composable("player") { PlayerScreen(current, files, vm, nav) }
                 composable("playlist") { PlaylistScreen(files, favorites, vm, nav, light, textColor, muted) }
@@ -130,7 +157,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun HomeScreen(files:List<MediaFile>, loading:Boolean, scanError:String?, vm:OnPlayerViewModel, nav:NavHostController, favorites:Set<String>, light:Boolean, fg:Color, muted:Color, card:Color) {
+@Composable private fun HomeScreen(files:List<MediaFile>, loading:Boolean, scanError:String?, vm:OnPlayerViewModel, nav:NavHostController, favorites:Set<String>, lastPlayed:MediaFile?, playbackActive:Boolean, light:Boolean, fg:Color, muted:Color, card:Color) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -168,11 +195,30 @@ class MainActivity : ComponentActivity() {
             IconButton(onClick={nav.navigate("search")}){Icon(Icons.Default.Search,null,tint=fg)}; IconButton(onClick={nav.navigate("settings")}){Icon(Icons.Default.Settings,null,tint=fg)}
         }
         }
-        Card(Modifier.fillMaxWidth().height(156.dp).border(1.dp,if(light) Color.White.copy(alpha=.92f) else Color.White.copy(alpha=.16f),RoundedCornerShape(28.dp)),shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=if(light) Color.White.copy(alpha=.68f) else Color(0x661C1A2A))) {
-            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Accent.copy(alpha=.30f),if(light) Color(0xBBFFFFFF) else Color(0xAA27213F),card)))) {
-                Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0x555D9CFF),Color.Transparent),center=androidx.compose.ui.geometry.Offset(900f,0f),radius=700f)))
-                Column(Modifier.align(Alignment.CenterStart).padding(20.dp)) { Text("Everything you love",fontSize=22.sp,fontWeight=FontWeight.Bold,color=fg); Text("Photos · Videos · Music",color=muted,modifier=Modifier.padding(top=5.dp)); Button(onClick={nav.navigate("library")},modifier=Modifier.padding(top=10.dp),colors=ButtonDefaults.buttonColors(containerColor=Accent)){Text("Open library")} }
-                Icon(Icons.Default.PlayCircle,null,tint=Accent.copy(alpha=.52f),modifier=Modifier.align(Alignment.CenterEnd).padding(end=18.dp).size(72.dp))
+        val featuredTrack = lastPlayed ?: files.firstOrNull { it.category == MediaCategory.Audio }
+        if (featuredTrack != null) {
+            HomeTrackCard(
+                file = featuredTrack,
+                isPlaying = playbackActive && lastPlayed?.uri == featuredTrack.uri,
+                light = light,
+                fg = fg,
+                muted = muted,
+                onClick = { vm.open(featuredTrack); nav.navigate("player") { launchSingleTop = true } }
+            )
+        } else {
+            Card(
+                Modifier.fillMaxWidth().height(142.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = if (light) Color.White else Color(0xFF1B1928))
+            ) {
+                Row(Modifier.fillMaxSize().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(46.dp))
+                    Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                        Text("No music played yet", color = fg, fontWeight = FontWeight.SemiBold)
+                        Text("Choose a song from your library", color = muted, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                    }
+                    Icon(Icons.Default.ChevronRight, null, tint = muted)
+                }
             }
         }
         Row(Modifier.fillMaxWidth().padding(top=10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
