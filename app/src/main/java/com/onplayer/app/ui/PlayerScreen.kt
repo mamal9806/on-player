@@ -35,6 +35,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -153,7 +154,7 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
                 IconButton(onClick={shuffle=!shuffle;player.shuffleModeEnabled=shuffle}) { Icon(Icons.Default.Shuffle,null,tint=if(shuffle) Color(0xFFC5A6FF) else Color.Gray) }
                 IconButton(onClick={playAt(currentIndex-1)},enabled=currentIndex>0) { Icon(Icons.Default.SkipPrevious,null,tint=if(currentIndex>0) Color.White else Color.Gray,modifier=Modifier.size(32.dp)) }
-                IconButton(onClick={if(isPlaying)player.pause() else player.play();isPlaying=!isPlaying},modifier=Modifier.size(64.dp)) { Icon(if(isPlaying)Icons.Default.PauseCircleFilled else Icons.Default.PlayCircleFilled,null,tint=Color(0xFFC5A6FF),modifier=Modifier.size(56.dp)) }
+                IconButton(onClick={if(isPlaying)player.pause() else player.play();isPlaying=!isPlaying},modifier=Modifier.size(64.dp).background(Color(0x552B2355),RoundedCornerShape(50)).border(1.5.dp,Color(0x66C5A6FF),RoundedCornerShape(50))) { Icon(if(isPlaying)Icons.Default.PauseCircleFilled else Icons.Default.PlayCircleFilled,null,tint=Color(0xFFC5A6FF),modifier=Modifier.size(56.dp)) }
                 IconButton(onClick={playAt(currentIndex+1)},enabled=currentIndex>=0&&currentIndex<playable.lastIndex) { Icon(Icons.Default.SkipNext,null,tint=if(currentIndex>=0&&currentIndex<playable.lastIndex) Color.White else Color.Gray,modifier=Modifier.size(32.dp)) }
                 IconButton(onClick={repeat=!repeat;player.repeatMode=if(repeat)ExoPlayer.REPEAT_MODE_ONE else ExoPlayer.REPEAT_MODE_OFF}) { Icon(Icons.Default.Repeat,null,tint=if(repeat) Color(0xFFC5A6FF) else Color.Gray) }
             }
@@ -223,7 +224,7 @@ private fun formatPlayerTime(ms: Long): String {
         }
     }
     Column(Modifier.fillMaxSize().padding(bottom = 90.dp)) {
-        Row(Modifier.fillMaxWidth().background(Color(0xAA211D36), RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp)), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xCC332B50),Color(0xAA181824))), RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp)).border(1.dp,Color.White.copy(alpha=.12f),RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp)), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
             Column(Modifier.weight(1f)) {
                 Text(current.name, color = Color.White, maxLines = 1)
@@ -244,9 +245,9 @@ private fun formatPlayerTime(ms: Long): String {
                     else if (abs(pan.x) > 65f && !swipeHandled) { move(if (pan.x > 0) -1 else 1); swipeHandled = true }
                     if (abs(pan.x) < 8f) swipeHandled = false
                 }
-            }.graphicsLayer { scaleX = scale; scaleY = scale; rotationZ = rotation; translationX = panX; translationY = panY })
+            }.pointerInput(current.uri) { detectTapGestures(onDoubleTap = { scale = if (scale > 1.05f) 1f else 2f; if (scale == 1f) { panX = 0f; panY = 0f } }) }.graphicsLayer { scaleX = scale; scaleY = scale; rotationZ = rotation; translationX = panX; translationY = panY })
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp).background(Brush.horizontalGradient(listOf(Color(0xBB29243E),Color(0xBB171722))),RoundedCornerShape(24.dp)).border(1.dp,Color.White.copy(alpha=.12f),RoundedCornerShape(24.dp)).padding(horizontal=4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { move(-1) }, enabled = index > 0) { Icon(Icons.Default.ChevronLeft, "Previous image", tint = if (index > 0) Color.White else Color.Gray) }
             Text(current.name, color = Color(0xFFC7C0DF), maxLines = 1, style = MaterialTheme.typography.labelMedium)
             IconButton(onClick = { move(1) }, enabled = index >= 0 && index < imageFiles.lastIndex) { Icon(Icons.Default.ChevronRight, "Next image", tint = if (index >= 0 && index < imageFiles.lastIndex) Color.White else Color.Gray) }
