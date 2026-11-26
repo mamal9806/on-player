@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <application android:label="On Player" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="true" android:supportsRtl="true">
+    <application android:label="On Player" android:icon="@drawable/app_icon" android:roundIcon="@drawable/app_icon" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="true" android:supportsRtl="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
         </activity>

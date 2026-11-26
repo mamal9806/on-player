@@ -22,8 +22,8 @@ class OnPlayerViewModel(app:Application):AndroidViewModel(app){
         _favorites.value = prefs[FAVORITES_KEY].orEmpty().split("\n").filter{it.isNotBlank()}.toSet()
         _themeMode.value = prefs[THEME_KEY] ?: "Dark"
     } } }
-    private val _files=MutableStateFlow<List<MediaFile>>(emptyList());val files:StateFlow<List<MediaFile>>=_files.asStateFlow()
-    private val _current=MutableStateFlow<MediaFile?>(null);val current:StateFlow<MediaFile?>=_current.asStateFlow()
+    private val _files=MutableStateFlow<List<MediaFile>>(emptyList());val files:StateFlow<List<MediaFile>> = _files.asStateFlow()
+    private val _current=MutableStateFlow<MediaFile?>(null);val current:StateFlow<MediaFile?> = _current.asStateFlow()
     private val _search=MutableStateFlow("");val search:StateFlow<String> = _search.asStateFlow()
     private val _scanning=MutableStateFlow(false);val scanning:StateFlow<Boolean> = _scanning.asStateFlow()
     private val _favorites=MutableStateFlow<Set<String>>(emptySet());val favorites:StateFlow<Set<String>> = _favorites.asStateFlow()
