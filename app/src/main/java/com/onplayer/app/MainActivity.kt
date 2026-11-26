@@ -195,7 +195,7 @@ class MainActivity : ComponentActivity() {
             IconButton(onClick={nav.navigate("search")}){Icon(Icons.Default.Search,null,tint=fg)}; IconButton(onClick={nav.navigate("settings")}){Icon(Icons.Default.Settings,null,tint=fg)}
         }
         }
-        val featuredTrack = lastPlayed ?: files.firstOrNull { it.category == MediaCategory.Audio }
+        val featuredTrack = lastPlayed
         if (featuredTrack != null) {
             HomeTrackCard(
                 file = featuredTrack,
