@@ -100,7 +100,7 @@ fun PlayerScreen(
 ) {
     val foreground = Color.White
     val secondary = Color(0xFFD1C9E4)
-    val accent = Color(0xFFD6B8FF)
+    val accent = MaterialTheme.colorScheme.primary
 
     if (file == null) {
         Box(
@@ -327,13 +327,13 @@ fun PlayerScreen(
             Image(
                 bitmap.asImageBitmap(),
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f }.blur(82.dp),
+                modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f },
                 contentScale = ContentScale.Crop
             )
             Image(
                 bitmap.asImageBitmap(),
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.28f; scaleY = 1.28f }.blur(42.dp),
+                modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.28f; scaleY = 1.28f },
                 contentScale = ContentScale.Crop
             )
         } ?: Box(
@@ -358,7 +358,7 @@ fun PlayerScreen(
         // Soft, translucent highlights create a layered Liquid Glass atmosphere.
         Box(
             Modifier.align(Alignment.TopEnd).padding(top = 85.dp, end = 8.dp)
-                .size(170.dp).blur(70.dp)
+                .size(170.dp)
                 .background(Color(0x665B4B9B), CircleShape)
         )
         Box(
@@ -431,12 +431,12 @@ fun PlayerScreen(
             ) {
                 // Diffuse halo behind the album cover.
                 Box(
-                    Modifier.fillMaxSize(0.82f).blur(34.dp)
+                    Modifier.fillMaxSize(0.82f)
                         .background(Color(0x667E6CC0), RoundedCornerShape(42.dp))
                 )
                 Box(
                     Modifier.fillMaxSize()
-                        .graphicsLayer { scaleX = pulse; scaleY = pulse }
+                        
                         .shadow(28.dp, RoundedCornerShape(34.dp), clip = false)
                         .clip(RoundedCornerShape(34.dp))
                         .background(
