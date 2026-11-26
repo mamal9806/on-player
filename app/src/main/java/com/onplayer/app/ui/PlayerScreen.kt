@@ -1,22 +1,22 @@
 package com.onplayer.app.ui
 
-import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlin.math.abs
-import android.view.ViewGroup
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -24,436 +24,136 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.common.Player
 import androidx.media3.session.MediaController
-import androidx.media3.session.SessionToken
-import android.content.ComponentName
-import com.onplayer.app.OnPlayerService
-import androidx.media3.ui.PlayerView
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.navigation.NavHostController
 import com.onplayer.app.data.MediaFile
-import com.onplayer.app.data.MediaCategory
 
-private data class AudioMeta(val title:String,val artist:String,val album:String,val artwork:Bitmap?)
-
-private fun String?.validAudioTag(): String? = this?.trim()?.takeIf {
-    it.isNotBlank() && !it.equals("unknown", true) && !it.equals("<unknown>", true) && !it.equals("null", true)
-}
+private data class TrackArtwork(val bitmap:Bitmap?,val title:String,val artist:String,val album:String)
 
 @Composable
-private fun rememberAudioMeta(file:MediaFile):AudioMeta {
+private fun rememberTrackArtwork(file:MediaFile):TrackArtwork {
     val context=LocalContext.current
-    val initial=AudioMeta(file.displayTitle,file.displayArtist,file.displayAlbum,null)
-    val meta by produceState(initial,file.uri) {
+    val initial=TrackArtwork(null,file.displayTitle,file.displayArtist,file.displayAlbum)
+    val data by produceState(initial,file.uri) {
         value=withContext(Dispatchers.IO) {
             val retriever=MediaMetadataRetriever()
             try {
                 retriever.setDataSource(context,file.uri)
-                val title=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE).validAudioTag() ?: file.displayTitle
-                val artist=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST).validAudioTag() ?: file.displayArtist
-                val album=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM).validAudioTag() ?: file.displayAlbum
-                val art=retriever.embeddedPicture?.let { bytes ->
-                    val options=BitmapFactory.Options().apply { inSampleSize=4 }
-                    BitmapFactory.decodeByteArray(bytes,0,bytes.size,options)
-                }
-                AudioMeta(title,artist,album,art)
-            } catch (_:Exception) { initial } finally { try { retriever.release() } catch (_:Exception) {} }
+                val title=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)?.takeIf{it.isNotBlank()&&it!="<unknown>"} ?: file.displayTitle
+                val artist=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)?.takeIf{it.isNotBlank()&&it!="<unknown>"} ?: file.displayArtist
+                val album=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)?.takeIf{it.isNotBlank()&&it!="<unknown>"} ?: file.displayAlbum
+                val bitmap=retriever.embeddedPicture?.let{bytes->BitmapFactory.decodeByteArray(bytes,0,bytes.size)}
+                TrackArtwork(bitmap,title,artist,album)
+            }catch(_:Exception){initial}finally{try{retriever.release()}catch(_:Exception){}}
         }
     }
-    return meta
+    return data
 }
 
 @Composable
-fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel, nav: NavHostController) {
-    val context = LocalContext.current
-    val controller = rememberMediaController(context)
-    val requestedPlayNext by vm.playNextRequest.collectAsState()
-    if (file == null) {
-        Column(Modifier.fillMaxSize().padding(bottom = 90.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Icon(Icons.Default.PlayCircle, null, tint = Color(0xFF9B4DFF), modifier = Modifier.size(72.dp))
-            Text("Choose a media file", color = Color.White)
-            Button(onClick = { nav.navigate("library") }) { Text("Browse Library") }
+fun PlayerScreen(file:MediaFile?,files:List<MediaFile>,vm:OnPlayerViewModel,player:MediaController?,onBack:()->Unit) {
+    val fg=Color.White
+    val muted=Color(0xFFB6B2C8)
+    val purple=Color(0xFFB18AFF)
+    if(file==null) {
+        Box(Modifier.fillMaxSize().background(Color(0xFF090A12)),contentAlignment=Alignment.Center) {
+            Column(horizontalAlignment=Alignment.Center) { Icon(Icons.Default.MusicNote,tint=purple,modifier=Modifier.size(58.dp)); Text("Choose a song",color=fg,modifier=Modifier.padding(top=12.dp)); TextButton(onClick=onBack){Text("Back")} }
         }
         return
     }
-    if (file.category == MediaCategory.Images) { ImagePreview(file, files, vm, nav); return }
-    if (controller == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF9B4DFF)) }
+    if(player==null) {
+        Box(Modifier.fillMaxSize().background(Color(0xFF090A12)),contentAlignment=Alignment.Center){CircularProgressIndicator(color=purple)}
         return
     }
-    val playableQueue = remember(files, file.category, file.uri) {
-        val sameType = files.filter { it.category == file.category && it.isPlayable }
-        if (sameType.any { it.uri == file.uri }) sameType else listOf(file) + sameType
-    }
-    DisposableEffect(controller, files) {
-        val listener = object : androidx.media3.common.Player.Listener {
-            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                val uri = mediaItem?.localConfiguration?.uri ?: return
-                files.firstOrNull { it.uri == uri }?.let(vm::open)
-            }
-        }
-        controller.addListener(listener)
-        onDispose { controller.removeListener(listener) }
-    }
-    LaunchedEffect(controller, file.uri, playableQueue, requestedPlayNext) {
-        if (controller.currentMediaItem?.localConfiguration?.uri != file.uri) {
-            val queueItems = playableQueue.map { item ->
-                MediaItem.Builder().setUri(item.uri).setMediaMetadata(
-                    MediaMetadata.Builder()
-                        .setTitle(item.displayTitle)
-                        .setArtist(if (item.category == MediaCategory.Audio) item.displayArtist else "On Player")
-                        .setAlbumTitle(item.displayAlbum)
-                        .build()
-                ).build()
-            }
-            val startIndex = playableQueue.indexOfFirst { it.uri == file.uri }.coerceAtLeast(0)
-            // Opening a track from the library must begin playback immediately.
-            controller.setMediaItems(queueItems, startIndex, 0L)
-            controller.prepare()
-            controller.play()
-        }
-
-        requestedPlayNext?.let { next ->
-            val currentUri = controller.currentMediaItem?.localConfiguration?.uri
-            if (currentUri == next.uri) {
-                vm.clearPlayNextRequest(next)
-            } else {
-                if (currentUri != null) {
-                    var existingIndex = -1
-                    for (index in 0 until controller.mediaItemCount) {
-                        if (controller.getMediaItemAt(index).localConfiguration?.uri == next.uri) {
-                            existingIndex = index
-                            break
-                        }
-                    }
-                    if (existingIndex >= 0) controller.removeMediaItem(existingIndex)
-
-                    val activeIndex = controller.currentMediaItemIndex
-                    val insertAt = if (activeIndex >= 0) activeIndex + 1 else controller.mediaItemCount
-                    val nextItem = MediaItem.Builder().setUri(next.uri).setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setTitle(next.displayTitle)
-                            .setArtist(next.displayArtist)
-                            .setAlbumTitle(next.displayAlbum)
-                            .build()
-                    ).build()
-                    controller.addMediaItem(insertAt.coerceIn(0, controller.mediaItemCount), nextItem)
-                    vm.clearPlayNextRequest(next)
-                } else {
-                    val nextItem = MediaItem.Builder().setUri(next.uri).setMediaMetadata(
-                        MediaMetadata.Builder().setTitle(next.displayTitle).setArtist(next.displayArtist).setAlbumTitle(next.displayAlbum).build()
-                    ).build()
-                    controller.setMediaItem(nextItem)
-                    controller.prepare()
-                    controller.play()
-                    vm.clearPlayNextRequest(next)
-                }
-            }
-        }
-    }
-    PlayerScreenContent(file, files, vm, nav, controller)
-}
-
-@Composable
-private fun rememberMediaController(context: android.content.Context): MediaController? {
-    val future = remember(context) {
-        MediaController.Builder(context, SessionToken(context, ComponentName(context, OnPlayerService::class.java))).buildAsync()
-    }
-    var controller by remember { mutableStateOf<MediaController?>(null) }
-    DisposableEffect(future) {
-        future.addListener(Runnable { controller = try { future.get() } catch (_: Exception) { null } }, context.mainExecutor)
-        onDispose { MediaController.releaseFuture(future) }
-    }
-    return controller
-}
-
-@Composable
-private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnPlayerViewModel, nav: NavHostController, player: MediaController) {
-    val context = LocalContext.current
-    val audioMeta = rememberAudioMeta(file)
-    val playable = remember(files, file.category, file.uri) {
-        val sameType = files.filter { it.category == file.category && it.isPlayable }
-        if (sameType.any { it.uri == file.uri }) sameType else listOf(file) + sameType
-    }
-    val currentIndex = playable.indexOfFirst { it.uri == file.uri }
-    var isPlaying by remember(file.uri) { mutableStateOf(player.isPlaying) }
-    var repeat by remember(file.uri) { mutableStateOf(false) }
-    var shuffle by remember(file.uri) { mutableStateOf(false) }
-    var volume by remember(file.uri) { mutableFloatStateOf(1f) }
-    var position by remember(file.uri) { mutableFloatStateOf(0f) }
-    var duration by remember(file.uri) { mutableFloatStateOf(0f) }
-    var aspect by remember(file.uri) { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
-    var rotation by remember(file.uri) { mutableFloatStateOf(0f) }
-    var fullscreen by remember(file.uri) { mutableStateOf(false) }
-    var playerView by remember { mutableStateOf<PlayerView?>(null) }
+    val art=rememberTrackArtwork(file)
+    val queue=remember(files,file.uri){(files.filter{it.isPlayable}.let{list->if(list.any{it.uri==file.uri})list else listOf(file)+list})}
+    var playing by remember{mutableStateOf(player.isPlaying)}
+    var position by remember{mutableLongStateOf(0L)}
+    var duration by remember{mutableLongStateOf(0L)}
+    var shuffle by remember{mutableStateOf(player.shuffleModeEnabled)}
+    var repeatOne by remember{mutableStateOf(player.repeatMode==Player.REPEAT_MODE_ONE)}
+    val pulse=rememberInfiniteTransition(label="artwork pulse").animateFloat(initial=1f,targetValue=1.025f,animationSpec=infiniteRepeatable(tween(2200),RepeatMode.Reverse),label="art scale").value
     DisposableEffect(player) {
-        val listener = object : androidx.media3.common.Player.Listener {
-            override fun onIsPlayingChanged(playing: Boolean) {
-                isPlaying = playing
-            }
-            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                position = 0f
-                duration = player.duration.takeIf { it > 0L }?.toFloat() ?: 0f
-            }
+        val listener=object:Player.Listener {
+            override fun onIsPlayingChanged(isPlaying:Boolean){playing=isPlaying}
+            override fun onMediaItemTransition(mediaItem:MediaItem?,reason:Int){position=0L;duration=player.duration.coerceAtLeast(0L)}
         }
         player.addListener(listener)
-        onDispose { player.removeListener(listener) }
+        onDispose{player.removeListener(listener)}
     }
-    LaunchedEffect(player, isPlaying) {
-        if (isPlaying) {
-            while (true) {
-                position = player.currentPosition.coerceAtLeast(0L).toFloat()
-                duration = player.duration.takeIf { it > 0L }?.toFloat() ?: 0f
-                delay(900)
-            }
-        } else {
-            position = player.currentPosition.coerceAtLeast(0L).toFloat()
-            duration = player.duration.takeIf { it > 0L }?.toFloat() ?: 0f
-        }
-    }
-    fun playAt(index: Int) {
-        if (index in playable.indices) {
-            player.seekTo(index, 0L)
+    LaunchedEffect(player,file.uri,queue) {
+        if(player.currentMediaItem?.localConfiguration?.uri!=file.uri) {
+            val items=queue.map{song->MediaItem.Builder().setUri(song.uri).setMediaMetadata(MediaMetadata.Builder().setTitle(song.displayTitle).setArtist(song.displayArtist).setAlbumTitle(song.displayAlbum).build()).build()}
+            player.setMediaItems(items,queue.indexOfFirst{it.uri==file.uri}.coerceAtLeast(0),0L)
+            player.prepare()
             player.play()
         }
     }
-    Column(Modifier.fillMaxSize().padding(bottom = 90.dp).padding(horizontal = 12.dp)) {
-        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp).background(Brush.horizontalGradient(listOf(Color(0xAA312A50),Color(0xAA171722))),RoundedCornerShape(22.dp)), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { nav.popBackStack() }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
-            Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
-                Text(if (file.category == MediaCategory.Audio) audioMeta.title else file.displayTitle, color = Color.White, maxLines = 1)
-                Text(if(file.category==MediaCategory.Audio) "Music player" else "Video player", color = Color(0xFFBDB6D6), style = MaterialTheme.typography.labelSmall)
-            }
-            if(file.category!=MediaCategory.Audio) {
-                IconButton(onClick = { fullscreen = true }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.Fullscreen, null, tint = Color.White) }
-                IconButton(onClick = { rotation = (rotation + 90f) % 360f }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.ScreenRotation, null, tint = Color.White) }
-            }
+    LaunchedEffect(player,playing) {
+        while(playing) {
+            position=player.currentPosition.coerceAtLeast(0L)
+            duration=player.duration.takeIf{it>0L}?:0L
+            delay(450)
         }
-        if(file.category==MediaCategory.Audio) {
-            Box(
-                Modifier.fillMaxWidth().weight(1f)
-                    .clip(RoundedCornerShape(26.dp))
-                    .background(Color(0xFF101018))
-            ) {
-                if (audioMeta.artwork != null) {
-                    Image(
-                        bitmap = audioMeta.artwork!!.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize()
-                            .graphicsLayer { scaleX = 1.22f; scaleY = 1.22f; alpha = 0.72f }
-                            .blur(38.dp),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Box(
-                        Modifier.fillMaxSize().background(
-                            Brush.linearGradient(listOf(Color(0xFF443078), Color(0xFF172747), Color(0xFF11111B)))
-                        )
-                    )
-                }
-                Box(
-                    Modifier.fillMaxSize().background(
-                        Brush.verticalGradient(
-                            listOf(Color(0xBB090911), Color(0x88202032), Color(0xDD090911))
-                        )
-                    )
-                )
-                Column(
-                    Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    if (audioMeta.artwork != null) {
-                        Image(
-                            bitmap = audioMeta.artwork!!.asImageBitmap(),
-                            contentDescription = "Album cover",
-                            modifier = Modifier.size(204.dp).clip(RoundedCornerShape(22.dp)),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Box(
-                            Modifier.size(204.dp)
-                                .background(Brush.linearGradient(listOf(Color(0xFF8B5CF6), Color(0xFF3035B8))), RoundedCornerShape(22.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.MusicNote, null, tint = Color.White, modifier = Modifier.size(76.dp))
-                        }
-                    }
-                    Text(
-                        audioMeta.title,
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleLarge,
-                        maxLines = 1,
-                        modifier = Modifier.padding(top = 20.dp)
-                    )
-                    Text(
-                        audioMeta.artist + if (audioMeta.album.isNotBlank()) " • " + audioMeta.album else "",
-                        color = Color.White.copy(alpha = .78f),
-                        maxLines = 1
-                    )
-                }
-            }
-        } else AndroidView(factory = { ctx -> PlayerView(ctx).apply { playerView=this; this.player=player; useController=true; resizeMode=aspect } }, update = { it.player=player; it.resizeMode=aspect }, modifier = Modifier.fillMaxWidth().weight(1f).background(Color.Black,RoundedCornerShape(24.dp)).graphicsLayer { rotationZ=rotation })
-        Column(Modifier.fillMaxWidth().padding(top=12.dp).background(Brush.verticalGradient(listOf(Color(0xAA29243E),Color(0xAA171722))),RoundedCornerShape(24.dp)).padding(14.dp)) {
-            Text(if (file.category == MediaCategory.Audio) audioMeta.title else file.displayTitle, color=Color.White, style=MaterialTheme.typography.titleMedium, maxLines=1)
-            Text(file.category.label+" • "+file.sizeText, color=Color(0xFFBDB6D6), style=MaterialTheme.typography.labelSmall)
-            Slider(value=if(duration>0) position.coerceIn(0f,duration) else 0f, onValueChange={position=it}, onValueChangeFinished={player.seekTo(position.toLong())}, valueRange=0f..duration.coerceAtLeast(1f), enabled=duration>0)
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(formatPlayerTime(position.toLong()),color=Color(0xFFBDB6D6),fontSize=11.sp);Text(formatPlayerTime(duration.toLong()),color=Color(0xFFBDB6D6),fontSize=11.sp)}
-            if (file.category == MediaCategory.Audio) {
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = { player.seekToPreviousMediaItem() },
-                        enabled = player.isCommandAvailable(androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM),
-                        modifier = Modifier.size(58.dp)
-                    ) {
-                        Icon(Icons.Default.SkipPrevious, "Previous track", tint = Color.White, modifier = Modifier.size(34.dp))
-                    }
-                    IconButton(
-                        onClick = { if (player.isPlaying) player.pause() else player.play() },
-                        modifier = Modifier.padding(horizontal = 24.dp).size(78.dp)
-                            .background(Color.White, RoundedCornerShape(50))
-                    ) {
-                        Icon(
-                            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            if (isPlaying) "Pause" else "Play",
-                            tint = Color(0xFF17131F),
-                            modifier = Modifier.size(48.dp)
-                        )
-                    }
-                    IconButton(
-                        onClick = { player.seekToNextMediaItem() },
-                        enabled = player.isCommandAvailable(androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM),
-                        modifier = Modifier.size(58.dp)
-                    ) {
-                        Icon(Icons.Default.SkipNext, "Next track", tint = Color.White, modifier = Modifier.size(34.dp))
-                    }
-                }
-            } else {
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
-                    IconButton(onClick={shuffle=!shuffle;player.shuffleModeEnabled=shuffle}) { Icon(Icons.Default.Shuffle,null,tint=if(shuffle) Color(0xFFC5A6FF) else Color.Gray) }
-                    IconButton(onClick={player.seekToPreviousMediaItem()},enabled=player.isCommandAvailable(androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)) { Icon(Icons.Default.SkipPrevious,null,tint=if(currentIndex>0) Color.White else Color.Gray,modifier=Modifier.size(32.dp)) }
-                    IconButton(onClick={if(isPlaying)player.pause() else player.play()},modifier=Modifier.size(64.dp).background(Color(0x552B2355),RoundedCornerShape(50)).border(1.5.dp,Color(0x66C5A6FF),RoundedCornerShape(50))) { Icon(if(isPlaying)Icons.Default.Pause else Icons.Default.PlayArrow,null,tint=Color(0xFFC5A6FF),modifier=Modifier.size(48.dp)) }
-                    IconButton(onClick={player.seekToNextMediaItem()},enabled=player.isCommandAvailable(androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)) { Icon(Icons.Default.SkipNext,null,tint=if(currentIndex>=0&&currentIndex<playable.lastIndex) Color.White else Color.Gray,modifier=Modifier.size(32.dp)) }
-                    IconButton(onClick={repeat=!repeat;player.repeatMode=if(repeat)ExoPlayer.REPEAT_MODE_ONE else ExoPlayer.REPEAT_MODE_OFF}) { Icon(Icons.Default.Repeat,null,tint=if(repeat) Color(0xFFC5A6FF) else Color.Gray) }
-                }
-                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                    Icon(Icons.Default.VolumeDown,null,tint=Color(0xFFBDB6D6))
-                    Slider(value=volume,onValueChange={volume=it;player.volume=it},modifier=Modifier.weight(1f))
-                    Icon(Icons.Default.VolumeUp,null,tint=Color(0xFFBDB6D6))
-                }
-            }
-            if(file.category!=MediaCategory.Audio) {
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
-                    Text("Aspect ratio",color=Color(0xFFBDB6D6),fontSize=12.sp)
-                    Row { listOf("Fit" to AspectRatioFrameLayout.RESIZE_MODE_FIT,"Fill" to AspectRatioFrameLayout.RESIZE_MODE_FILL,"Zoom" to AspectRatioFrameLayout.RESIZE_MODE_ZOOM).forEach { (label,mode) -> Text(label,color=if(aspect==mode)Color(0xFFC5A6FF)else Color.Gray,modifier=Modifier.padding(horizontal=5.dp).clickable{aspect=mode;playerView?.resizeMode=mode},fontSize=12.sp) } }
-                }
-    
-            }
-            if (file.category == MediaCategory.Videos) {
-                Button(onClick = {
-                    val seconds=(player.currentPosition/1000).coerceAtLeast(0)
-                    val query="${file.displayTitle} scene at ${seconds}s"
-                    context.startActivity(Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://www.google.com/search?q="+android.net.Uri.encode(query))))
-                },modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF33205D))) { Icon(Icons.Default.Search,null);Spacer(Modifier.width(6.dp));Text("Search This Scene / Title") }
-            }
-        }
+        position=player.currentPosition.coerceAtLeast(0L)
+        duration=player.duration.takeIf{it>0L}?:0L
     }
-
-    if(fullscreen) Dialog(onDismissRequest={fullscreen=false},properties=DialogProperties(usePlatformDefaultWidth=false)) {
-        Box(Modifier.fillMaxSize().background(Color.Black)) {
-            AndroidView(factory={ctx->PlayerView(ctx).apply{this.player=player;useController=true;resizeMode=aspect}},modifier=Modifier.fillMaxSize())
-            IconButton(onClick={fullscreen=false},modifier=Modifier.align(Alignment.TopEnd).padding(12.dp).background(Color(0x88202020),RoundedCornerShape(50))) { Icon(Icons.Default.FullscreenExit,null,tint=Color.White) }
+    Box(Modifier.fillMaxSize().background(Color(0xFF090A12))) {
+        art.bitmap?.let { bitmap ->
+            Image(bitmap.asImageBitmap(),null,Modifier.fillMaxSize().graphicsLayer{scaleX=1.45f;scaleY=1.45f}.blur(72.dp),contentScale=ContentScale.Crop)
+            Image(bitmap.asImageBitmap(),null,Modifier.fillMaxSize().graphicsLayer{scaleX=1.22f;scaleY=1.22f}.blur(36.dp),contentScale=ContentScale.Crop)
+        } ?: Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF4B347F),Color(0xFF232949),Color(0xFF090A12)))))
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xCC080810),Color(0x44202030),Color(0xEE080810)))))
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal=22.dp,vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                IconButton(onClick=onBack,modifier=Modifier.size(46.dp).background(Color.White.copy(alpha=.09f),CircleShape)){Icon(Icons.Default.KeyboardArrowDown,null,tint=fg,modifier=Modifier.size(30.dp))}
+                Column(Modifier.weight(1f),horizontalAlignment=Alignment.CenterHorizontally) {
+                    Text("NOW PLAYING",color=purple,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=2.sp)
+                    Text("On Player",color=muted,fontSize=12.sp)
+                }
+                IconButton(onClick={},modifier=Modifier.size(46.dp).background(Color.White.copy(alpha=.09f),CircleShape)){Icon(Icons.Default.MoreHoriz,null,tint=fg)}
+            }
+            Spacer(Modifier.weight(.18f))
+            Box(Modifier.fillMaxWidth().aspectRatio(1f).padding(horizontal=8.dp),contentAlignment=Alignment.Center) {
+                art.bitmap?.let{bitmap->Image(bitmap.asImageBitmap(),null,Modifier.fillMaxSize().graphicsLayer{scaleX=pulse;scaleY=pulse}.clip(RoundedCornerShape(30.dp)).border(1.dp,Color.White.copy(alpha=.18f),RoundedCornerShape(30.dp)),contentScale=ContentScale.Crop)}
+                ?:Box(Modifier.fillMaxSize().graphicsLayer{scaleX=pulse;scaleY=pulse}.clip(RoundedCornerShape(30.dp)).background(Brush.linearGradient(listOf(Color(0xFF8463CA),Color(0xFF293A79)))),contentAlignment=Alignment.Center){Icon(Icons.Default.MusicNote,null,tint=Color.White,modifier=Modifier.size(92.dp))}
+            }
+            Spacer(Modifier.weight(.20f))
+            Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.Start) {
+                Text(art.title,color=fg,fontSize=26.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                Text(art.artist+(if(art.album.isNotBlank())" • "+art.album else ""),color=muted,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(top=5.dp))
+            }
+            Slider(value=if(duration>0)position.toFloat().coerceIn(0f,duration.toFloat()) else 0f,onValueChange={position=it.toLong()},onValueChangeFinished={player.seekTo(position)},valueRange=0f..duration.toFloat().coerceAtLeast(1f),enabled=duration>0,colors=SliderDefaults.colors(thumbColor=Color.White,activeTrackColor=Color.White,inactiveTrackColor=Color.White.copy(alpha=.28f)))
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text(timeText(position),color=muted,fontSize=11.sp);Text(timeText(duration),color=muted,fontSize=11.sp) }
+            Row(Modifier.fillMaxWidth().padding(top=18.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceEvenly) {
+                IconButton(onClick={shuffle=!shuffle;player.shuffleModeEnabled=shuffle},modifier=Modifier.size(48.dp)){Icon(Icons.Default.Shuffle,null,tint=if(shuffle)purple else muted,modifier=Modifier.size(22.dp))}
+                IconButton(onClick={player.seekToPreviousMediaItem()},modifier=Modifier.size(60.dp)){Icon(Icons.Default.SkipPrevious,null,tint=fg,modifier=Modifier.size(36.dp))}
+                Box(Modifier.size(82.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Color.White,Color(0xFFE5D8FF)))),contentAlignment=Alignment.Center) {
+                    IconButton(onClick={if(player.isPlaying)player.pause()else player.play()},modifier=Modifier.size(82.dp)){Icon(if(playing)Icons.Default.Pause else Icons.Default.PlayArrow,null,tint=Color(0xFF191521),modifier=Modifier.size(42.dp))}
+                }
+                IconButton(onClick={player.seekToNextMediaItem()},modifier=Modifier.size(60.dp)){Icon(Icons.Default.SkipNext,null,tint=fg,modifier=Modifier.size(36.dp))}
+                IconButton(onClick={repeatOne=!repeatOne;player.repeatMode=if(repeatOne)Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF},modifier=Modifier.size(48.dp)){Icon(Icons.Default.RepeatOne,null,tint=if(repeatOne)purple else muted,modifier=Modifier.size(22.dp))}
+            }
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
 
-private fun formatPlayerTime(ms: Long): String {
-    val seconds=(ms/1000).coerceAtLeast(0)
-    val hours=seconds/3600
-    val minutes=(seconds%3600)/60
-    val remainder=seconds%60
-    return if(hours>0) "${hours}:${minutes.toString().padStart(2,'0')}:${remainder.toString().padStart(2,'0')}" else "${minutes}:${remainder.toString().padStart(2,'0')}"
-}
-
-@Composable private fun ImagePreview(file: MediaFile, files: List<MediaFile>, vm: OnPlayerViewModel, nav: NavHostController) {
-    val context = LocalContext.current
-    val imageFiles = remember(files) { files.filter { it.category == MediaCategory.Images } }
-    var current by remember(file.uri) { mutableStateOf(file) }
-    var scale by remember(file.uri) { mutableFloatStateOf(1f) }
-    var rotation by remember(file.uri) { mutableFloatStateOf(0f) }
-    var panX by remember(file.uri) { mutableFloatStateOf(0f) }
-    var panY by remember(file.uri) { mutableFloatStateOf(0f) }
-    var swipeHandled by remember(file.uri) { mutableStateOf(false) }
-    val index = imageFiles.indexOfFirst { it.uri == current.uri }
-    val resolution by produceState("Loading dimensions…", current.uri) {
-        value = withContext(Dispatchers.IO) {
-            try {
-                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                context.contentResolver.openInputStream(current.uri)?.use { BitmapFactory.decodeStream(it, null, options) }
-                if (options.outWidth > 0 && options.outHeight > 0) "${options.outWidth} × ${options.outHeight}" else "Unknown dimensions"
-            } catch (_: Exception) { "Unknown dimensions" }
-        }
-    }
-    fun move(delta: Int) {
-        if (imageFiles.isEmpty() || index < 0) return
-        val next = (index + delta).coerceIn(0, imageFiles.lastIndex)
-        if (next != index && next >= 0) {
-            current = imageFiles[next]
-            vm.open(current)
-            scale = 1f; rotation = 0f; panX = 0f; panY = 0f; swipeHandled = false
-        }
-    }
-    Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xCC332B50),Color(0xAA181824))), RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp)).border(1.dp,Color.White.copy(alpha=.12f),RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp)), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { nav.popBackStack() }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
-            Column(Modifier.weight(1f)) {
-                Text(current.name, color = Color.White, maxLines = 1)
-                Text("${index + 1} / ${imageFiles.size} • ${resolution} • ${current.sizeText}", color = Color(0xFFBDB6D6), style = MaterialTheme.typography.labelSmall)
-            }
-            IconButton(onClick = { scale = 1f; rotation = 0f; panX = 0f; panY = 0f }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.FitScreen, null, tint = Color.White) }
-            IconButton(onClick = { rotation += 90f }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.RotateRight, null, tint = Color.White) }
-            IconButton(onClick = {
-                try { val share = Intent(Intent.ACTION_SEND).apply { type = current.mime; putExtra(Intent.EXTRA_STREAM, current.uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }; context.startActivity(Intent.createChooser(share, "Share image")) } catch (_: Exception) { }
-            }) { Icon(Icons.Default.Share, null, tint = Color.White) }
-            IconButton(onClick = {
-                try { val open = Intent(Intent.ACTION_VIEW).setDataAndType(current.uri, current.mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION); context.startActivity(Intent.createChooser(open, "Open photo with")) } catch (_: Exception) { }
-            }) { Icon(Icons.Default.OpenInNew, null, tint = Color.White) }
-        }
-        Box(Modifier.weight(1f).fillMaxWidth().background(Color.Black), contentAlignment = Alignment.Center) {
-            AndroidView(factory = { android.widget.ImageView(it).apply { scaleType = android.widget.ImageView.ScaleType.FIT_CENTER } }, update = { it.setImageURI(current.uri) }, modifier = Modifier.fillMaxSize().pointerInput(current.uri) {
-                detectTransformGestures { _, pan, zoom, rot ->
-                    scale = (scale * zoom).coerceIn(1f, 6f)
-                    rotation += rot
-                    if (scale > 1.05f) { panX += pan.x; panY += pan.y }
-                    else if (abs(pan.x) > 65f && !swipeHandled) { move(if (pan.x > 0) -1 else 1); swipeHandled = true }
-                    if (abs(pan.x) < 8f) swipeHandled = false
-                }
-            }.pointerInput(current.uri) { detectTapGestures(onDoubleTap = { scale = if (scale > 1.05f) 1f else 2f; if (scale == 1f) { panX = 0f; panY = 0f } }) }.graphicsLayer { scaleX = scale; scaleY = scale; rotationZ = rotation; translationX = panX; translationY = panY })
-        }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp).background(Brush.horizontalGradient(listOf(Color(0xBB29243E),Color(0xBB171722))),RoundedCornerShape(24.dp)).border(1.dp,Color.White.copy(alpha=.12f),RoundedCornerShape(24.dp)).padding(horizontal=4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { move(-1) }, enabled = index > 0) { Icon(Icons.Default.ChevronLeft, "Previous image", tint = if (index > 0) Color.White else Color.Gray) }
-            Text(current.name, color = Color(0xFFC7C0DF), maxLines = 1, style = MaterialTheme.typography.labelMedium)
-            IconButton(onClick = { move(1) }, enabled = index >= 0 && index < imageFiles.lastIndex) { Icon(Icons.Default.ChevronRight, "Next image", tint = if (index >= 0 && index < imageFiles.lastIndex) Color.White else Color.Gray) }
-        }
-    }
+private fun timeText(ms:Long):String {
+    val sec=(ms/1000).coerceAtLeast(0)
+    return "%d:%02d".format(sec/60,sec%60)
 }
