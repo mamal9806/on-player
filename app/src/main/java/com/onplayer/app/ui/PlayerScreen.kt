@@ -426,32 +426,17 @@ fun PlayerScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Box(
-                    Modifier.fillMaxSize(0.88f)
-                        .graphicsLayer { rotationZ = if (playing) discRotation else 0f }
-                        .clip(CircleShape)
-                        .background(Brush.radialGradient(listOf(dynamicSoft, dynamicDeep, Color(0xFF08090D))))
-                        .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape),
+                    Modifier.fillMaxSize(0.94f)
+                        .clip(RoundedCornerShape(30.dp))
+                        .background(Brush.linearGradient(listOf(dynamicAccent.copy(alpha = 0.22f), dynamicDeep, Color(0xFF08090D))))
+                        .border(1.dp, Color.White.copy(alpha = 0.13f), RoundedCornerShape(30.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Canvas(Modifier.fillMaxSize()) {
-                        val center = Offset(size.width / 2f, size.height / 2f)
-                        for (i in 1..14) {
-                            val radius = size.minDimension * (0.28f + i * 0.025f)
-                            drawCircle(Color.White.copy(alpha = if (i % 3 == 0) 0.13f else 0.035f), radius, center, style = Stroke(width = size.minDimension * 0.003f))
-                        }
-                        drawCircle(dynamicAccent.copy(alpha = 0.32f), size.minDimension * 0.49f, center, style = Stroke(width = size.minDimension * 0.012f))
-                    }
-                    Box(
-                        Modifier.fillMaxSize(0.42f).clip(CircleShape)
-                            .border(2.dp, Color(0xFF9B9DA5), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        artwork.bitmap?.let { bitmap ->
-                            Image(bitmap.asImageBitmap(), contentDescription = "Album cover",
-                                modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
-                        } ?: Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(52.dp))
-                        Box(Modifier.size(10.dp).clip(CircleShape).background(Color(0xFF111217)).border(1.dp, Color.White.copy(alpha = 0.5f), CircleShape))
-                    }
+                    artwork.bitmap?.let { bitmap ->
+                        Image(bitmap.asImageBitmap(), contentDescription = "Album cover",
+                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(30.dp)), contentScale = ContentScale.Crop)
+                    } ?: Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(72.dp))
+                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, dynamicDeep.copy(alpha = 0.24f), Color.Black.copy(alpha = 0.35f)))))
                 }
             }
             Spacer(Modifier.weight(0.13f))
