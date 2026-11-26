@@ -216,7 +216,7 @@ fun PlayerScreen(
                                     .padding(horizontal = 10.dp, vertical = 13.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.QueueMusic, null, tint = Color(0xFFD6B8FF))
+                                Icon(Icons.Default.QueueMusic, null, tint = Color(0xFFFFA0B1))
                                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                                     Text(playlist.name, color = Color.White, fontWeight = FontWeight.SemiBold)
                                     Text(playlist.songUris.size.toString() + " songs", color = Color(0xFFD1C9E4), fontSize = 11.sp)
@@ -323,18 +323,6 @@ fun PlayerScreen(
     }
 
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF090A0F), Color(0xFF10131C), Color(0xFF050609))))) {
-
-        // Soft, translucent highlights create a layered Liquid Glass atmosphere.
-        Box(
-            Modifier.align(Alignment.TopEnd).padding(top = 85.dp, end = 8.dp)
-                .size(170.dp)
-                .background(Color(0x665B4B9B), CircleShape)
-        )
-        Box(
-            Modifier.align(Alignment.BottomStart).padding(bottom = 150.dp, start = 0.dp)
-                .size(190.dp).blur(82.dp)
-                .background(Color(0x554D7BB7), CircleShape)
-        )
 
         Column(
             Modifier.fillMaxSize()
@@ -609,7 +597,7 @@ private fun GlassPlayButton(playing: Boolean, onClick: () -> Unit) {
             .clip(CircleShape)
             .background(
                 Brush.linearGradient(
-                    listOf(Color(0xFFFDFBFF), Color(0xFFDCCBFA), Color(0xFFA993D7))
+                    listOf(Color(0xFFFFF4F6), Color(0xFFFFA0B1), Color(0xFFFF536A))
                 )
             )
             .border(
@@ -628,7 +616,7 @@ private fun GlassPlayButton(playing: Boolean, onClick: () -> Unit) {
         Icon(
             if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
             contentDescription = if (playing) "Pause" else "Play",
-            tint = Color(0xFF211A31),
+            tint = Color(0xFF5B1324),
             modifier = Modifier.size(39.dp)
         )
     }
