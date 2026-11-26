@@ -3,6 +3,7 @@ name: On Player Android APK Build
 on:
   push:
     branches: [ main, master ]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -36,8 +37,20 @@ jobs:
       - name: Install required Android SDK packages
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Build debug APK
-        run: gradle --no-daemon --stacktrace assembleDebug
+      - name: Build debug APK (retry transient repository errors)
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            echo "Build attempt $attempt/3"
+            if gradle --no-daemon --stacktrace assembleDebug; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Build failed; waiting before retry..."
+              sleep $((attempt * 20))
+            fi
+          done
+          exit 1
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
