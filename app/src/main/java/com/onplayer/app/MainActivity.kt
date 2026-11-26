@@ -167,10 +167,14 @@ class MainActivity : ComponentActivity() {
             IconButton(onClick={nav.navigate("search")}){Icon(Icons.Default.Search,null,tint=fg)}; IconButton(onClick={nav.navigate("settings")}){Icon(Icons.Default.Settings,null,tint=fg)}
         }
         }
-        Card(Modifier.fillMaxWidth().height(148.dp).border(1.dp,if(light) Color.White.copy(alpha=.9f) else Color.White.copy(alpha=.14f),RoundedCornerShape(24.dp)),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=if(light) Color.White.copy(alpha=.82f) else Color(0xAA1C1A2A))) {
-            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Accent.copy(alpha=.18f),card)))) {
-                Column(Modifier.align(Alignment.CenterStart).padding(20.dp)) { Text("Everything you love",fontSize=22.sp,fontWeight=FontWeight.Bold,color=fg); Text("Browse photos, videos and files",color=muted,modifier=Modifier.padding(top=5.dp)); Button(onClick={nav.navigate("library")},modifier=Modifier.padding(top=10.dp)){Text("Open library")} }
-                Icon(Icons.Default.PlayCircle,null,tint=Accent.copy(alpha=.45f),modifier=Modifier.align(Alignment.CenterEnd).padding(end=18.dp).size(68.dp))
+        val heroMotion = rememberInfiniteTransition(label="hero-glass")
+        val heroGlow by heroMotion.animateFloat(initialValue=0.10f,targetValue=0.24f,animationSpec=infiniteRepeatable(tween(2400),RepeatMode.Reverse),label="hero-glow")
+        Card(Modifier.fillMaxWidth().height(156.dp).border(1.dp,if(light) Color.White.copy(alpha=.92f) else Color.White.copy(alpha=.16f+heroGlow),RoundedCornerShape(28.dp)),shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=if(light) Color.White.copy(alpha=.68f) else Color(0x661C1A2A))) {
+            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Accent.copy(alpha=.30f),if(light) Color(0xBBFFFFFF) else Color(0xAA27213F),card)))) {
+                Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0x555D9CFF),Color.Transparent),center=androidx.compose.ui.geometry.Offset(900f,0f),radius=700f)))
+                Column(Modifier.align(Alignment.CenterStart).padding(20.dp)) { Text("Everything you love",fontSize=22.sp,fontWeight=FontWeight.Bold,color=fg); Text("Browse photos, videos and files",color=muted,modifier=Modifier.padding(top=5.dp)); Button(onClick={nav.navigate("library")},modifier=Modifier.padding(top=10.dp),colors=ButtonDefaults.buttonColors(containerColor=Accent)){Text("Open library")} }
+                Icon(Icons.Default.PlayCircle,null,tint=Accent.copy(alpha=.52f),modifier=Modifier.align(Alignment.CenterEnd).padding(end=18.dp).size(72.dp))
+                Box(Modifier.align(Alignment.TopEnd).padding(12.dp).size(10.dp).background(Color.White.copy(alpha=.5f+heroGlow),RoundedCornerShape(50)))
             }
         }
         Row(Modifier.fillMaxWidth().padding(top=10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
