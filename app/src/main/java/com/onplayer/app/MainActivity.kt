@@ -169,7 +169,7 @@ class MainActivity : ComponentActivity() {
         }
         val heroMotion = rememberInfiniteTransition(label="hero-glass")
         val heroGlow by heroMotion.animateFloat(initialValue=0.10f,targetValue=0.24f,animationSpec=infiniteRepeatable(tween(2400),RepeatMode.Reverse),label="hero-glow")
-        Card(Modifier.fillMaxWidth().height(156.dp).border(1.dp,if(light) Color.White.copy(alpha=.92f) else Color.White.copy(alpha=.16f+heroGlow),RoundedCornerShape(28.dp)),shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=if(light) Color.White.copy(alpha=.68f) else Color(0x661C1A2A))) {
+        Card(Modifier.fillMaxWidth().height(156.dp).border(1.dp,if(light) Color.White.copy(alpha=.92f) else Color.White.copy(alpha=.16f),RoundedCornerShape(28.dp)),shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=if(light) Color.White.copy(alpha=.68f) else Color(0x661C1A2A))) {
             Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Accent.copy(alpha=.30f),if(light) Color(0xBBFFFFFF) else Color(0xAA27213F),card)))) {
                 Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0x555D9CFF),Color.Transparent),center=androidx.compose.ui.geometry.Offset(900f,0f),radius=700f)))
                 Column(Modifier.align(Alignment.CenterStart).padding(20.dp)) { Text("Everything you love",fontSize=22.sp,fontWeight=FontWeight.Bold,color=fg); Text("Photos · Videos · Music",color=muted,modifier=Modifier.padding(top=5.dp)); Button(onClick={nav.navigate("library")},modifier=Modifier.padding(top=10.dp),colors=ButtonDefaults.buttonColors(containerColor=Accent)){Text("Open library")} }
@@ -190,12 +190,12 @@ class MainActivity : ComponentActivity() {
         LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)){ items(files.take(10),key={it.uri.toString()}) { FileRow(it,vm,nav,favorites,light,fg,muted) } }
     }
 }
-@Composable private fun AppLogo(size: androidx.compose.ui.unit.Dp) { Box(Modifier.size(size).background(Brush.linearGradient(listOf(Color(0xFF5144FF),Color(0xFF9C29E8))),RoundedCornerShape(size*.28f)),contentAlignment=Alignment.Center){Icon(Icons.Default.PlayArrow,null,tint=Color.White,modifier=Modifier.size(size*.58f))} }
+@Composable private fun AppLogo(size: androidx.compose.ui.unit.Dp) { Box(Modifier.size(size).background(Brush.linearGradient(listOf(Color(0xFF261A55),Color(0xFF7C3AED),Color(0xFF2D58D8))),RoundedCornerShape(size*.32f)).border(1.dp,Color.White.copy(alpha=.26f),RoundedCornerShape(size*.32f)),contentAlignment=Alignment.Center){ Icon(Icons.Default.GraphicEq,null,tint=Color.White,modifier=Modifier.size(size*.58f)) } }
 @Composable private fun CategoryTile(cat:MediaCategory,count:Int,modifier:Modifier,light:Boolean,fg:Color,muted:Color,onClick:()->Unit) {
     val (icon,color)=when(cat){MediaCategory.Images->Icons.Default.Image to Color(0xFF9D52FF);MediaCategory.Videos->Icons.Default.VideoLibrary to Color(0xFFFF4F91);MediaCategory.Audio->Icons.Default.MusicNote to Color(0xFF4C9DFF)}
     val transition = rememberInfiniteTransition(label="tile-glow")
     val glow = transition.animateFloat(initialValue=.12f,targetValue=.25f,animationSpec=infiniteRepeatable(tween(1800),RepeatMode.Reverse),label="glow")
-    Column(modifier.animateContentSize().height(112.dp).background(Brush.linearGradient(if(light) listOf(Color.White,Color(0xFFF0EBFF)) else listOf(Color(0xCC252236),Color(0xCC171722))),RoundedCornerShape(20.dp)).border(1.dp,if(light) Color.White.copy(alpha=.9f) else Color.White.copy(alpha=glow.value),RoundedCornerShape(20.dp)).clickable{onClick()}.padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){Icon(icon,null,tint=color,modifier=Modifier.size(30.dp));Text(cat.label,color=fg,fontSize=13.sp,fontWeight=FontWeight.Medium,modifier=Modifier.padding(top=5.dp));Text("$count items",color=muted,fontSize=11.sp)}
+    Column(modifier.animateContentSize().height(112.dp).background(Brush.linearGradient(if(light) listOf(Color.White,Color(0xFFF0EBFF)) else listOf(Color(0xCC252236),Color(0xCC171722))),RoundedCornerShape(20.dp)).border(1.dp,if(light) Color.White.copy(alpha=.9f) else Color.White.copy(alpha=.10f),RoundedCornerShape(20.dp)).clickable{onClick()}.padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){Icon(icon,null,tint=color,modifier=Modifier.size(30.dp));Text(cat.label,color=fg,fontSize=13.sp,fontWeight=FontWeight.Medium,modifier=Modifier.padding(top=5.dp));Text("$count items",color=muted,fontSize=11.sp)}
 }
 @Composable private fun FilePreview(file:MediaFile,icon:androidx.compose.ui.graphics.vector.ImageVector) {
     val context=androidx.compose.ui.platform.LocalContext.current
