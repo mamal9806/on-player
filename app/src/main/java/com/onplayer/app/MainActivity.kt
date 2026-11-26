@@ -5,6 +5,11 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Intent
 import android.content.IntentFilter
+import android.app.Activity
+import android.content.ContentValues
+import android.provider.MediaStore
+import androidx.activity.compose.BackHandler
+import androidx.activity.result.IntentSenderRequest
 import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -71,7 +76,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Tab(val title: String) { Home("Home"), Library("Library"), Favorites("Favorites"), Search("Search"), Settings("Settings") }
+private enum class Tab(val title: String) { Home("Home"), Library("Library"), Playlists("Playlists"), Favorites("Favorites"), Search("Search"), Settings("Settings") }
 
 @Composable
 fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
@@ -81,12 +86,21 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
     val scanning by vm.scanning.collectAsState()
     val scanError by vm.scanError.collectAsState()
     val favorites by vm.favorites.collectAsState()
+    val playlists by vm.playlists.collectAsState()
     val lastPlayed by vm.lastPlayed.collectAsState()
     val playing by vm.isPlaying.collectAsState()
     val themeMode by vm.themeMode.collectAsState()
     var tab by remember { mutableStateOf(Tab.Home) }
     var playerOpen by remember { mutableStateOf(false) }
+    var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
+    var pendingDelete by remember { mutableStateOf<MediaFile?>(null) }
     val controller = rememberRootController()
+    BackHandler(enabled = playerOpen || (tab == Tab.Playlists && selectedPlaylistId != null)) {
+        if (playerOpen) playerOpen = false else selectedPlaylistId = null
+    }
+    LaunchedEffect(playlists, selectedPlaylistId) {
+        if (selectedPlaylistId != null && playlists.none { it.id == selectedPlaylistId }) selectedPlaylistId = null
+    }
 
     DisposableEffect(context, vm) {
         val receiver = object : BroadcastReceiver() {
@@ -103,11 +117,12 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
         onDispose { runCatching { context.unregisterReceiver(receiver) } }
     }
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
-    val dark = themeMode != "Light" && (themeMode != "System" || systemDark)
-    val background = if (dark) Deep else Color(0xFFF5F4FA)
+    val isAmoled = themeMode == "AMOLED Black"
+    val dark = isAmoled || (themeMode != "Light" && (themeMode != "System" || systemDark))
+    val background = when { isAmoled -> Color.Black; dark -> Deep; else -> Color(0xFFF5F4FA) }
     val foreground = if (dark) Color.White else Color(0xFF22232E)
     val muted = if (dark) Subtle else Color(0xFF6E7081)
-    val surface = if (dark) CardDark else Color.White
+    val surface = if (isAmoled) Color(0xFF090909) else if (dark) CardDark else Color.White
     val colors = if (dark) darkColorScheme(primary=Purple, background=background, surface=surface, onSurface=foreground, onBackground=foreground)
         else lightColorScheme(primary=Color(0xFF7B50D7), background=background, surface=surface, onSurface=foreground, onBackground=foreground)
 
@@ -158,9 +173,53 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
         }
     }
 
+    val deleteLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        val deletedFile = pendingDelete
+        if (result.resultCode == Activity.RESULT_OK && deletedFile != null) {
+            if (controller?.currentMediaItem?.localConfiguration?.uri == deletedFile.uri) controller.stop()
+            vm.removeDeletedTrack(deletedFile)
+            vm.scan()
+        }
+        pendingDelete = null
+    }
+    val requestDelete: (MediaFile) -> Unit = { target ->
+        pendingDelete = target
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val request = MediaStore.createDeleteRequest(context.contentResolver, listOf(target.uri))
+                deleteLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
+            } else {
+                val removed = context.contentResolver.delete(target.uri, null, null)
+                if (removed > 0) {
+                    if (controller?.currentMediaItem?.localConfiguration?.uri == target.uri) controller.stop()
+                    vm.removeDeletedTrack(target)
+                    vm.scan()
+                } else {
+                    vm.setScanError("Android could not delete this audio file.")
+                }
+                pendingDelete = null
+            }
+        } catch (error: Exception) {
+            pendingDelete = null
+            vm.setScanError(error.message ?: "Could not delete this audio file.")
+        }
+    }
+
     MaterialTheme(colorScheme=colors) {
         if (playerOpen) {
-            PlayerScreen(current, files, vm, controller, onBack={playerOpen=false})
+            PlayerScreen(
+                file = current,
+                files = files,
+                vm = vm,
+                player = controller,
+                playlists = playlists,
+                onBack = { playerOpen = false },
+                onAddToPlaylist = { playlistId, song -> vm.addToPlaylist(playlistId, song) },
+                onRenameTrack = { song, title -> vm.renameTrack(song, title) },
+                onDeleteTrack = requestDelete
+            )
         } else {
             Scaffold(
                 containerColor=background,
@@ -172,6 +231,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                                 val icon = when(item) {
                                     Tab.Home -> Icons.Default.Home
                                     Tab.Library -> Icons.Default.LibraryMusic
+                                    Tab.Playlists -> Icons.Default.QueueMusic
                                     Tab.Favorites -> Icons.Default.Favorite
                                     Tab.Search -> Icons.Default.Search
                                     Tab.Settings -> Icons.Default.Settings
@@ -186,6 +246,21 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                     when(tab) {
                         Tab.Home -> HomeTab(files, lastPlayed, playing, scanning, scanError, dark, foreground, muted, surface, onRefresh={vm.scan()}, onPick={audioPicker.launch(arrayOf("audio/*"))}, onOpenSong={vm.open(it);playerOpen=true}, onLibrary={tab=Tab.Library})
                         Tab.Library -> SongListTab("Your library",files,scanning,scanError,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))})
+                        Tab.Playlists -> PlaylistsTab(
+                            playlists = playlists,
+                            files = files,
+                            selectedPlaylistId = selectedPlaylistId,
+                            dark = dark,
+                            fg = foreground,
+                            muted = muted,
+                            onSelect = { selectedPlaylistId = it },
+                            onBack = { selectedPlaylistId = null },
+                            onCreate = { vm.createPlaylist(it) },
+                            onDelete = { vm.deletePlaylist(it) },
+                            onAddSong = { id, song -> vm.addToPlaylist(id, song) },
+                            onRemoveSong = { id, song -> vm.removeFromPlaylist(id, song) },
+                            onOpenSong = { vm.open(it); playerOpen = true }
+                        )
                         Tab.Favorites -> SongListTab("Favorites",files.filter{it.uri.toString() in favorites},scanning,null,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))},emptyText="No favorites yet")
                         Tab.Search -> SearchTab(files,favorites,dark,foreground,muted,onOpenSong={vm.open(it);playerOpen=true},onFavorite={vm.toggleFavorite(it)})
                         Tab.Settings -> SettingsTab(themeMode,dark,foreground,muted,vm)
@@ -317,18 +392,266 @@ private fun MiniPlayer(file:MediaFile,playing:Boolean,dark:Boolean,onClick:()->U
 
 @Composable
 private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlayerViewModel) {
-    Column(Modifier.fillMaxSize().padding(22.dp)) {
-        Text("Settings",color=fg,fontSize=28.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(bottom=20.dp))
-        Text("Appearance",color=muted,fontSize=13.sp)
-        listOf("Dark","Light","System","AMOLED Black").forEach { mode ->
-            Row(Modifier.fillMaxWidth().padding(vertical=5.dp).clip(RoundedCornerShape(16.dp)).background(if(dark)CardDark else Color.White).clickable{vm.setTheme(mode)}.padding(16.dp),verticalAlignment=Alignment.CenterVertically) {
-                Text(mode,color=fg,modifier=Modifier.weight(1f))
-                if(theme==mode) Icon(Icons.Default.CheckCircle,contentDescription="Selected",tint=Purple)
+    val files by vm.files.collectAsState()
+    val favorites by vm.favorites.collectAsState()
+    var confirmClearFavorites by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxSize().padding(horizontal=20.dp)) {
+        Text("Settings",color=fg,fontSize=30.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=24.dp,bottom=20.dp))
+        Text("APPEARANCE",color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp)
+        Card(
+            Modifier.fillMaxWidth().padding(top=10.dp),
+            shape=RoundedCornerShape(24.dp),
+            colors=CardDefaults.cardColors(containerColor=if(dark) CardDark else Color.White)
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                listOf("Dark","Light","System","AMOLED Black").forEach { mode ->
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                            .clickable { vm.setTheme(mode) }.padding(vertical=13.dp,horizontal=4.dp),
+                        verticalAlignment=Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            when(mode) {
+                                "Light" -> Icons.Default.LightMode
+                                "System" -> Icons.Default.SettingsBrightness
+                                "AMOLED Black" -> Icons.Default.Contrast
+                                else -> Icons.Default.DarkMode
+                            },
+                            contentDescription=null,tint=Purple
+                        )
+                        Text(mode,color=fg,modifier=Modifier.weight(1f).padding(start=12.dp))
+                        if(theme==mode) Icon(Icons.Default.CheckCircle,contentDescription="Selected",tint=Purple)
+                    }
+                }
             }
         }
-        Spacer(Modifier.height(22.dp))
-        Text("On Player",color=fg,fontWeight=FontWeight.Bold)
-        Text("Audio-only music player • Media controls • Background playback",color=muted,fontSize=13.sp,modifier=Modifier.padding(top=6.dp))
+        Text("LIBRARY",color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp,modifier=Modifier.padding(top=24.dp))
+        Card(
+            Modifier.fillMaxWidth().padding(top=10.dp),
+            shape=RoundedCornerShape(24.dp),
+            colors=CardDefaults.cardColors(containerColor=if(dark) CardDark else Color.White)
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Row(verticalAlignment=Alignment.CenterVertically) {
+                    Icon(Icons.Default.LibraryMusic,null,tint=Purple)
+                    Column(Modifier.weight(1f).padding(start=12.dp)) {
+                        Text("Music library",color=fg,fontWeight=FontWeight.SemiBold)
+                        Text(files.size.toString()+" tracks scanned",color=muted,fontSize=12.sp)
+                    }
+                    TextButton(onClick={vm.scan()}) { Text("Rescan") }
+                }
+                HorizontalDivider(color=muted.copy(alpha=0.18f))
+                Row(verticalAlignment=Alignment.CenterVertically,modifier=Modifier.padding(top=12.dp)) {
+                    Icon(Icons.Default.Favorite,null,tint=Color(0xFFEA79A8))
+                    Column(Modifier.weight(1f).padding(start=12.dp)) {
+                        Text("Favorites",color=fg,fontWeight=FontWeight.SemiBold)
+                        Text(favorites.size.toString()+" saved tracks",color=muted,fontSize=12.sp)
+                    }
+                    TextButton(onClick={confirmClearFavorites=true},enabled=favorites.isNotEmpty()) { Text("Clear") }
+                }
+            }
+        }
+        Text("PLAYBACK",color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp,modifier=Modifier.padding(top=24.dp))
+        Card(
+            Modifier.fillMaxWidth().padding(top=10.dp),
+            shape=RoundedCornerShape(24.dp),
+            colors=CardDefaults.cardColors(containerColor=if(dark) CardDark else Color.White)
+        ) {
+            Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically) {
+                Icon(Icons.Default.GraphicEq,null,tint=Purple)
+                Column(Modifier.weight(1f).padding(start=12.dp)) {
+                    Text("Audio focus",color=fg,fontWeight=FontWeight.SemiBold)
+                    Text("On Player requests Android audio focus when playback starts.",color=muted,fontSize=12.sp)
+                }
+                Icon(Icons.Default.CheckCircle,color=Color(0xFF69C99B),contentDescription="Enabled")
+            }
+        }
+        Text("ABOUT",color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp,modifier=Modifier.padding(top=24.dp))
+        Card(
+            Modifier.fillMaxWidth().padding(top=10.dp,bottom=28.dp),
+            shape=RoundedCornerShape(24.dp),
+            colors=CardDefaults.cardColors(containerColor=if(dark) CardDark else Color.White)
+        ) {
+            Column(Modifier.padding(18.dp)) {
+                Row(verticalAlignment=Alignment.CenterVertically) {
+                    Box(Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(Brush.linearGradient(listOf(Color(0xFF9B75EF),Color(0xFF323D74)))),contentAlignment=Alignment.Center) {
+                        Icon(Icons.Default.Headphones,null,tint=Color.White,modifier=Modifier.size(25.dp))
+                    }
+                    Column(Modifier.weight(1f).padding(start=12.dp)) {
+                        Text("On Player",color=fg,fontWeight=FontWeight.Bold,fontSize=17.sp)
+                        Text("Version 1.0 • Music, beautifully simple",color=muted,fontSize=12.sp)
+                    }
+                }
+                Text("An audio-only player with persistent playlists, favorites and background playback.",color=muted,fontSize=13.sp,modifier=Modifier.padding(top=14.dp))
+            }
+        }
+    }
+    if(confirmClearFavorites) {
+        AlertDialog(
+            onDismissRequest={confirmClearFavorites=false},
+            title={Text("Clear favorites?")},
+            text={Text("This removes all saved favorites from On Player.")},
+            confirmButton={TextButton(onClick={vm.clearFavorites();confirmClearFavorites=false}){Text("Clear")}},
+            dismissButton={TextButton(onClick={confirmClearFavorites=false}){Text("Cancel")}}
+        )
+    }
+}
+
+@Composable
+private fun PlaylistsTab(
+    playlists:List<com.onplayer.app.ui.UserPlaylist>,
+    files:List<MediaFile>,
+    selectedPlaylistId:String?,
+    dark:Boolean,
+    fg:Color,
+    muted:Color,
+    onSelect:(String)->Unit,
+    onBack:()->Unit,
+    onCreate:(String)->Unit,
+    onDelete:(String)->Unit,
+    onAddSong:(String,MediaFile)->Unit,
+    onRemoveSong:(String,MediaFile)->Unit,
+    onOpenSong:(MediaFile)->Unit
+) {
+    var showCreate by remember { mutableStateOf(false) }
+    var newName by remember { mutableStateOf("") }
+    var showAddSongs by remember { mutableStateOf(false) }
+    val selected = playlists.firstOrNull { it.id == selectedPlaylistId }
+    Column(Modifier.fillMaxSize().padding(horizontal=18.dp)) {
+        Row(Modifier.fillMaxWidth().padding(top=24.dp,bottom=16.dp),verticalAlignment=Alignment.CenterVertically) {
+            if(selected != null) {
+                IconButton(onClick=onBack) { Icon(Icons.Default.ArrowBack,null,tint=fg) }
+            }
+            Column(Modifier.weight(1f)) {
+                Text(if(selected == null) "Your playlists" else selected.name,color=fg,fontSize=27.sp,fontWeight=FontWeight.Bold)
+                Text(
+                    if(selected == null) playlists.size.toString()+" playlists saved on this device"
+                    else selected.songUris.size.toString()+" songs",
+                    color=muted,fontSize=12.sp
+                )
+            }
+            if(selected == null) {
+                IconButton(onClick={newName="";showCreate=true}) {
+                    Icon(Icons.Default.AddCircle,null,tint=Purple,modifier=Modifier.size(28.dp))
+                }
+            } else {
+                IconButton(onClick={showAddSongs=true}) { Icon(Icons.Default.Add,null,tint=Purple) }
+                IconButton(onClick={onBack}) { Icon(Icons.Default.Close,null,tint=muted) }
+            }
+        }
+        if(selected == null) {
+            if(playlists.isEmpty()) {
+                Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) {
+                    Column(horizontalAlignment=Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.QueueMusic,null,tint=Purple,modifier=Modifier.size(58.dp))
+                        Text("Make it yours",color=fg,fontSize=20.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=14.dp))
+                        Text("Create a playlist and collect your favorite tracks.",color=muted,fontSize=13.sp)
+                        Button(onClick={newName="";showCreate=true},modifier=Modifier.padding(top=16.dp)) {
+                            Icon(Icons.Default.Add,null);Spacer(Modifier.width(6.dp));Text("Create playlist")
+                        }
+                    }
+                }
+            } else {
+                LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    items(playlists,key={it.id}) { playlist ->
+                        Card(
+                            Modifier.fillMaxWidth().clickable{onSelect(playlist.id)},
+                            shape=RoundedCornerShape(22.dp),
+                            colors=CardDefaults.cardColors(containerColor=if(dark)CardDark else Color.White)
+                        ) {
+                            Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically) {
+                                Box(Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(Brush.linearGradient(listOf(Color(0xFF8863D6),Color(0xFF344B76)))),contentAlignment=Alignment.Center) {
+                                    Icon(Icons.Default.QueueMusic,null,tint=Color.White,modifier=Modifier.size(26.dp))
+                                }
+                                Column(Modifier.weight(1f).padding(horizontal=13.dp)) {
+                                    Text(playlist.name,color=fg,fontWeight=FontWeight.SemiBold,fontSize=16.sp)
+                                    Text(playlist.songUris.size.toString()+" songs",color=muted,fontSize=12.sp)
+                                }
+                                Icon(Icons.Default.ChevronRight,null,tint=muted)
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            Row(Modifier.fillMaxWidth().padding(bottom=10.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                Button(onClick={showAddSongs=true},modifier=Modifier.weight(1f)) {
+                    Icon(Icons.Default.Add,null);Spacer(Modifier.width(6.dp));Text("Add songs")
+                }
+                OutlinedButton(onClick={onDelete(selected.id)) {
+                    Icon(Icons.Default.DeleteOutline,null);Spacer(Modifier.width(5.dp));Text("Delete playlist")
+                }
+            }
+            val songs = selected.songUris.mapNotNull { uri -> files.firstOrNull { it.uri.toString() == uri } }
+            if(songs.isEmpty()) {
+                Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) {
+                    Text("This playlist is empty. Add some music.",color=muted)
+                }
+            } else {
+                LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    items(songs,key={it.uri.toString()}) { song ->
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                                .background(if(dark)CardDark else Color.White).padding(start=14.dp,end=4.dp),
+                            verticalAlignment=Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f).clickable{onOpenSong(song)}.padding(vertical=13.dp)) {
+                                Text(song.displayTitle,color=fg,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                                Text(song.displayArtist,color=muted,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+                            }
+                            IconButton(onClick={onRemoveSong(selected.id,song)}) { Icon(Icons.Default.RemoveCircleOutline,null,tint=muted) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if(showCreate) {
+        AlertDialog(
+            onDismissRequest={showCreate=false},
+            title={Text("New playlist")},
+            text={
+                OutlinedTextField(
+                    value=newName,onValueChange={newName=it},singleLine=true,
+                    label={Text("Playlist name")},placeholder={Text("e.g. Late night")}
+                )
+            },
+            confirmButton={
+                TextButton(onClick={if(newName.isNotBlank()){onCreate(newName);showCreate=false}}) { Text("Create") }
+            },
+            dismissButton={TextButton(onClick={showCreate=false}){Text("Cancel")}}
+        )
+    }
+    if(showAddSongs && selected != null) {
+        AlertDialog(
+            onDismissRequest={showAddSongs=false},
+            title={Text("Add music to " + selected.name)},
+            text={
+                if(files.isEmpty()) Text("Your library is empty.")
+                else LazyColumn(Modifier.heightIn(max=420.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                    items(files,key={it.uri.toString()}) { song ->
+                        val alreadyAdded = song.uri.toString() in selected.songUris
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                                .clickable{if(!alreadyAdded)onAddSong(selected.id,song)}
+                                .padding(horizontal=8.dp,vertical=10.dp),
+                            verticalAlignment=Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(song.displayTitle,color=fg,maxLines=1,overflow=TextOverflow.Ellipsis)
+                                Text(song.displayArtist,color=muted,fontSize=11.sp)
+                            }
+                            Icon(
+                                if(alreadyAdded) Icons.Default.CheckCircle else Icons.Default.AddCircleOutline,
+                                contentDescription=null,
+                                tint=if(alreadyAdded) Color(0xFF69C99B) else Purple
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton={TextButton(onClick={showAddSongs=false}){Text("Done")}}
+        )
     }
 }
 
