@@ -123,7 +123,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 @Composable private fun BottomItem(label:String, icon:androidx.compose.ui.graphics.vector.ImageVector, active:Boolean, inactive:Color, onNav:(String)->Unit, route:String) {
-    Column(Modifier.clickable { onNav(route) }.padding(horizontal=6.dp), horizontalAlignment=Alignment.CenterHorizontally) {
+    Column(Modifier.padding(horizontal=2.dp).background(if(active) Accent.copy(alpha=.16f) else Color.Transparent,RoundedCornerShape(16.dp)).border(1.dp,if(active) Accent.copy(alpha=.45f) else inactive.copy(alpha=.16f),RoundedCornerShape(16.dp)).clickable { onNav(route) }.padding(horizontal=9.dp,vertical=6.dp), horizontalAlignment=Alignment.CenterHorizontally) {
         Icon(icon,null,tint=if(active) Accent else inactive,modifier=Modifier.size(22.dp)); Text(label,color=if(active) Accent else inactive,fontSize=10.sp)
     }
 }
@@ -172,7 +172,7 @@ class MainActivity : ComponentActivity() {
         Card(Modifier.fillMaxWidth().height(156.dp).border(1.dp,if(light) Color.White.copy(alpha=.92f) else Color.White.copy(alpha=.16f+heroGlow),RoundedCornerShape(28.dp)),shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=if(light) Color.White.copy(alpha=.68f) else Color(0x661C1A2A))) {
             Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Accent.copy(alpha=.30f),if(light) Color(0xBBFFFFFF) else Color(0xAA27213F),card)))) {
                 Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0x555D9CFF),Color.Transparent),center=androidx.compose.ui.geometry.Offset(900f,0f),radius=700f)))
-                Column(Modifier.align(Alignment.CenterStart).padding(20.dp)) { Text("Everything you love",fontSize=22.sp,fontWeight=FontWeight.Bold,color=fg); Text("Browse photos, videos and files",color=muted,modifier=Modifier.padding(top=5.dp)); Button(onClick={nav.navigate("library")},modifier=Modifier.padding(top=10.dp),colors=ButtonDefaults.buttonColors(containerColor=Accent)){Text("Open library")} }
+                Column(Modifier.align(Alignment.CenterStart).padding(20.dp)) { Text("Everything you love",fontSize=22.sp,fontWeight=FontWeight.Bold,color=fg); Text("Photos · Videos · Music",color=muted,modifier=Modifier.padding(top=5.dp)); Button(onClick={nav.navigate("library")},modifier=Modifier.padding(top=10.dp),colors=ButtonDefaults.buttonColors(containerColor=Accent)){Text("Open library")} }
                 Icon(Icons.Default.PlayCircle,null,tint=Accent.copy(alpha=.52f),modifier=Modifier.align(Alignment.CenterEnd).padding(end=18.dp).size(72.dp))
                 Box(Modifier.align(Alignment.TopEnd).padding(12.dp).size(10.dp).background(Color.White.copy(alpha=.5f+heroGlow),RoundedCornerShape(50)))
             }
@@ -182,10 +182,10 @@ class MainActivity : ComponentActivity() {
             OutlinedButton(onClick={filePicker.launch(arrayOf("*/*"))},modifier=Modifier.weight(1f),colors=ButtonDefaults.outlinedButtonColors(contentColor=fg)) { Icon(Icons.Default.FolderOpen,null); Spacer(Modifier.width(6.dp)); Text("Browse device") }
         }
         if (scanError != null) Text(scanError, color=if(light) Color(0xFF8A4B00) else Color(0xFFFFC078), fontSize=12.sp, modifier=Modifier.padding(top=6.dp))
-        Text("Browse",fontSize=18.sp,fontWeight=FontWeight.Bold,color=fg,modifier=Modifier.padding(top=18.dp,bottom=10.dp))
-        val cats=listOf(MediaCategory.Images,MediaCategory.Videos,MediaCategory.Audio,MediaCategory.Documents,MediaCategory.Archives,MediaCategory.APK,MediaCategory.Others)
+        Text("Your media",fontSize=18.sp,fontWeight=FontWeight.Bold,color=fg,modifier=Modifier.padding(top=18.dp,bottom=10.dp))
+        val cats=listOf(MediaCategory.Images,MediaCategory.Videos,MediaCategory.Audio)
         Column(verticalArrangement=Arrangement.spacedBy(8.dp)){ cats.chunked(3).forEach { row -> Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){row.forEach { c -> CategoryTile(c,counts[c]?:0,Modifier.weight(1f),light,fg,muted){nav.navigate("category/${c.name}")} } } } }
-        Row(Modifier.fillMaxWidth().padding(top=18.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){ Text("Recent files",fontSize=19.sp,fontWeight=FontWeight.Bold,color=fg,modifier=Modifier.weight(1f)); Text("View all  ›",color=Accent,modifier=Modifier.clickable{nav.navigate("library")}) }
+        Row(Modifier.fillMaxWidth().padding(top=18.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){ Text("Recently added",fontSize=19.sp,fontWeight=FontWeight.Bold,color=fg,modifier=Modifier.weight(1f)); Text("See all  ›",color=Accent,modifier=Modifier.clickable{nav.navigate("library")}) }
         if(loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)){ items(files.take(10),key={it.uri.toString()}) { FileRow(it,vm,nav,favorites,light,fg,muted) } }
     }
