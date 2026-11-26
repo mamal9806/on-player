@@ -3,6 +3,8 @@ name: On Player Android APK Build
 on:
   push:
     branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
   workflow_dispatch:
 
 permissions:
@@ -12,6 +14,7 @@ jobs:
   build-apk:
     name: Build On Player APK
     runs-on: ubuntu-latest
+    timeout-minutes: 35
 
     steps:
       - name: Checkout repository
@@ -23,10 +26,11 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle 8.9
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+          cache-cleanup: on-success
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
@@ -34,15 +38,52 @@ jobs:
           packages: platform-tools
 
       - name: Install required Android SDK packages
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: |
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+          sdkmanager --licenses
 
-      - name: Build debug APK
-        run: gradle --no-daemon --stacktrace assembleDebug
+      - name: Build APK with retries and fallback
+        shell: bash
+        run: |
+          set +e
+          mkdir -p ci-logs
+          for attempt in 1 2 3; do
+            echo "===== Build attempt ${attempt}/3 ====="
+            gradle --no-daemon --stacktrace assembleDebug 2>&1 | tee "ci-logs/build-attempt-${attempt}.log"
+            status=${PIPESTATUS[0]}
+            if [ "${status}" -eq 0 ]; then
+              echo "Build succeeded on attempt ${attempt}"
+              exit 0
+            fi
+            echo "Build attempt ${attempt} failed (exit ${status})"
+            if [ "${attempt}" -lt 3 ]; then
+              echo "Cleaning project outputs and retrying with dependency refresh..."
+              gradle --no-daemon clean 2>&1 | tee -a "ci-logs/build-attempt-${attempt}.log"
+              gradle --no-daemon --refresh-dependencies assembleDebug 2>&1 | tee -a "ci-logs/build-attempt-${attempt}.log"
+              status=${PIPESTATUS[0]}
+              if [ "${status}" -eq 0 ]; then
+                echo "Build succeeded during fallback attempt ${attempt}"
+                exit 0
+              fi
+            fi
+          done
+          echo "All build attempts failed. See build logs artifact."
+          exit 1
 
       - name: Upload APK artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: On-Player-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: On-Player-build-diagnostics
+          path: ci-logs/*.log
+          if-no-files-found: warn
           retention-days: 14
