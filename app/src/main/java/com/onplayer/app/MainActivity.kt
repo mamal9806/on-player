@@ -420,3 +420,120 @@ private object MediaThumbnailCache {
 @Composable private fun PlaylistScreen(files:List<MediaFile>,favorites:Set<String>,vm:OnPlayerViewModel,nav:NavHostController,light:Boolean,fg:Color,muted:Color){val fav=files.filter{it.uri.toString() in favorites};Column(Modifier.fillMaxSize().padding(bottom=90.dp).padding(16.dp)){Text("Favorites",fontSize=26.sp,fontWeight=FontWeight.Bold,color=fg);Text("${fav.size} saved items",color=muted,modifier=Modifier.padding(bottom=12.dp));LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){items(fav,key={it.uri.toString()}){FileRow(it,vm,nav,favorites,light,fg,muted)}}}}
 @Composable private fun SettingsScreen(vm:OnPlayerViewModel,mode:String,nav:NavHostController,light:Boolean,fg:Color,muted:Color){Column(Modifier.fillMaxSize().padding(bottom=90.dp).padding(20.dp)){Text("Settings",fontSize=27.sp,fontWeight=FontWeight.Bold,color=fg);Text("Appearance",color=muted,modifier=Modifier.padding(top=18.dp,bottom=4.dp));listOf("Dark","Light","AMOLED Black","System").forEach{option->Row(Modifier.fillMaxWidth().clickable{vm.setTheme(option)}.padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically){Text(option,color=fg,modifier=Modifier.weight(1f));RadioButton(mode==option,onClick={vm.setTheme(option)})}};HorizontalDivider();Row(Modifier.fillMaxWidth().clickable{vm.scan()}.padding(vertical=18.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.Refresh,null,tint=Accent);Text("Refresh media library",color=fg,modifier=Modifier.padding(start=12.dp))};HorizontalDivider();Row(Modifier.fillMaxWidth().clickable{nav.navigate("about")}.padding(vertical=18.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.Info,null,tint=Accent);Text("About On Player",color=fg,modifier=Modifier.weight(1f).padding(start=12.dp));Icon(Icons.Default.ChevronRight,null,tint=muted)}}}
 @Composable private fun AboutScreen(nav:NavHostController,light:Boolean,fg:Color,muted:Color){Column(Modifier.fillMaxSize().padding(bottom=90.dp).padding(24.dp),horizontalAlignment=Alignment.CenterHorizontally){Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){IconButton(onClick={nav.popBackStack()}){Icon(Icons.Default.ArrowBack,null,tint=fg)};Text("About On Player",color=fg,fontSize=22.sp,fontWeight=FontWeight.Bold)};Spacer(Modifier.height(28.dp));AppLogo(100.dp);Text("On Player",color=fg,fontSize=26.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=14.dp));Text("Play. Browse. Enjoy.",color=muted,modifier=Modifier.padding(top=5.dp));Spacer(Modifier.height(24.dp));Card(colors=CardDefaults.cardColors(containerColor=if(light) Color.White else DarkCard),shape=RoundedCornerShape(24.dp)){Column(Modifier.fillMaxWidth().padding(18.dp)){Text("Your all-in-one media viewer",color=fg,fontWeight=FontWeight.SemiBold);Text("Music · Videos · Photos",color=muted,modifier=Modifier.padding(top=8.dp));Text("Version 1.0",color=muted,modifier=Modifier.padding(top=12.dp))}}}}
+
+
+@Composable
+private fun rememberAppMediaController(): MediaController? {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val future = remember(context) {
+        MediaController.Builder(
+            context,
+            SessionToken(context, ComponentName(context, OnPlayerService::class.java))
+        ).buildAsync()
+    }
+    var controller by remember { mutableStateOf<MediaController?>(null) }
+    DisposableEffect(future) {
+        future.addListener(
+            Runnable { controller = try { future.get() } catch (_: Exception) { null } },
+            context.mainExecutor
+        )
+        onDispose { MediaController.releaseFuture(future) }
+    }
+    return controller
+}
+
+@Composable
+private fun HomeTrackCard(
+    file: MediaFile,
+    isPlaying: Boolean,
+    light: Boolean,
+    fg: Color,
+    muted: Color,
+    onClick: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val artwork by produceState<Bitmap?>(null, file.uri) {
+        value = withContext(Dispatchers.IO) {
+            val retriever = MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(context, file.uri)
+                retriever.embeddedPicture?.let { bytes ->
+                    val options = BitmapFactory.Options().apply { inSampleSize = 8 }
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+                }
+            } catch (_: Exception) {
+                null
+            } finally {
+                try { retriever.release() } catch (_: Exception) { }
+            }
+        }
+    }
+    val shape = RoundedCornerShape(24.dp)
+    Row(
+        Modifier.fillMaxWidth()
+            .height(154.dp)
+            .background(
+                Brush.linearGradient(
+                    if (light) listOf(Color(0xFFECE7FF), Color(0xFFDCE5FF), Color.White)
+                    else listOf(Color(0xFF30224B), Color(0xFF1E2440), Color(0xFF181824))
+                ),
+                shape
+            )
+            .border(1.dp, if (light) Color.White else Color.White.copy(alpha = .12f), shape)
+            .clickable { onClick() }
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                if (isPlaying) "NOW PLAYING" else "LAST PLAYED",
+                color = Accent,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                file.displayTitle,
+                color = fg,
+                fontSize = 19.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 7.dp)
+            )
+            Text(
+                file.displayArtist,
+                color = muted,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+            Row(
+                Modifier.padding(top = 9.dp)
+                    .background(Accent, RoundedCornerShape(50))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                Text("Open player", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+        Box(
+            Modifier.size(112.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(Color(0x332D2946)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (artwork != null) {
+                Image(
+                    bitmap = artwork!!.asImageBitmap(),
+                    contentDescription = "Album artwork",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(Icons.Default.MusicNote, null, tint = Accent, modifier = Modifier.size(42.dp))
+            }
+        }
+    }
+}
