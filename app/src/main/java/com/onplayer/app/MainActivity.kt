@@ -70,6 +70,7 @@ class MainActivity : ComponentActivity() {
     val files by vm.files.collectAsState()
     val current by vm.current.collectAsState()
     val scanning by vm.scanning.collectAsState()
+    val scanError by vm.scanError.collectAsState()
     val favorites by vm.favorites.collectAsState()
     val themeMode by vm.themeMode.collectAsState()
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
@@ -88,7 +89,7 @@ class MainActivity : ComponentActivity() {
     MaterialTheme(colorScheme=colors) {
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(if (light) Color(0xFFF7F5FF) else Color(0xFF11101D), bg, if (light) Color(0xFFEDE9FF) else Color(0xFF08080F))))) {
             NavHost(navController=nav, startDestination="home", modifier=Modifier.fillMaxSize()) {
-                composable("home") { HomeScreen(files, scanning, vm, nav, favorites, light, textColor, muted, card) }
+                composable("home") { HomeScreen(files, scanning, scanError, vm, nav, favorites, light, textColor, muted, card) }
                 composable("library") { LibraryScreen(files, vm, nav, favorites, light, textColor, muted) }
                 composable("player") { PlayerScreen(current, files, vm, nav) }
                 composable("playlist") { PlaylistScreen(files, favorites, vm, nav, light, textColor, muted) }
@@ -123,7 +124,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun HomeScreen(files:List<MediaFile>, loading:Boolean, vm:OnPlayerViewModel, nav:NavHostController, favorites:Set<String>, light:Boolean, fg:Color, muted:Color, card:Color) {
+@Composable private fun HomeScreen(files:List<MediaFile>, loading:Boolean, scanError:String?, vm:OnPlayerViewModel, nav:NavHostController, favorites:Set<String>, light:Boolean, fg:Color, muted:Color, card:Color) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) try {
+            context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            val mime = context.contentResolver.getType(uri) ?: "*/*"
+            val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            context.startActivity(Intent.createChooser(intent, "Open selected file"))
+        } catch (_: Exception) { }
+    }
     val counts=MediaCategory.values().associateWith { c -> files.count { it.category==c } }
     Column(Modifier.fillMaxSize().padding(bottom=88.dp).padding(horizontal=16.dp)) {
         Row(Modifier.padding(top=24.dp,bottom=18.dp),verticalAlignment=Alignment.CenterVertically) {
@@ -136,6 +146,11 @@ class MainActivity : ComponentActivity() {
                 Icon(Icons.Default.PlayCircle,null,tint=Accent.copy(alpha=.45f),modifier=Modifier.align(Alignment.CenterEnd).padding(end=18.dp).size(68.dp))
             }
         }
+        Row(Modifier.fillMaxWidth().padding(top=10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(onClick={vm.scan()},modifier=Modifier.weight(1f),colors=ButtonDefaults.outlinedButtonColors(contentColor=fg)) { Icon(Icons.Default.Refresh,null); Spacer(Modifier.width(6.dp)); Text("Rescan") }
+            OutlinedButton(onClick={filePicker.launch(arrayOf("*/*"))},modifier=Modifier.weight(1f),colors=ButtonDefaults.outlinedButtonColors(contentColor=fg)) { Icon(Icons.Default.FolderOpen,null); Spacer(Modifier.width(6.dp)); Text("Browse device") }
+        }
+        if (scanError != null) Text(scanError, color=if(light) Color(0xFF8A4B00) else Color(0xFFFFC078), fontSize=12.sp, modifier=Modifier.padding(top=6.dp))
         Text("Browse",fontSize=18.sp,fontWeight=FontWeight.Bold,color=fg,modifier=Modifier.padding(top=18.dp,bottom=10.dp))
         val cats=listOf(MediaCategory.Images,MediaCategory.Videos,MediaCategory.Audio,MediaCategory.Documents,MediaCategory.Archives,MediaCategory.APK,MediaCategory.Others)
         Column(verticalArrangement=Arrangement.spacedBy(8.dp)){ cats.chunked(3).forEach { row -> Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){row.forEach { c -> CategoryTile(c,counts[c]?:0,Modifier.weight(1f),light,fg,muted){nav.navigate("category/${c.name}")} } } } }
