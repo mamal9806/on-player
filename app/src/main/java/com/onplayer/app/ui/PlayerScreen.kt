@@ -89,6 +89,7 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
     var swipeHandled by remember(file.uri) { mutableStateOf(false) }
     val index = imageFiles.indexOfFirst { it.uri == current.uri }
     fun move(delta: Int) {
+        if (imageFiles.isEmpty() || index < 0) return
         val next = (index + delta).coerceIn(0, imageFiles.lastIndex)
         if (next != index && next >= 0) {
             current = imageFiles[next]
