@@ -20,6 +20,8 @@ class OnPlayerViewModel(app: Application) : AndroidViewModel(app) {
     val files: StateFlow<List<MediaFile>> = _files.asStateFlow()
     private val _current = MutableStateFlow<MediaFile?>(null)
     val current: StateFlow<MediaFile?> = _current.asStateFlow()
+    private val _playNextRequest = MutableStateFlow<MediaFile?>(null)
+    val playNextRequest: StateFlow<MediaFile?> = _playNextRequest.asStateFlow()
     private val _search = MutableStateFlow("")
     val search: StateFlow<String> = _search.asStateFlow()
     private val _scanning = MutableStateFlow(false)
@@ -50,6 +52,21 @@ class OnPlayerViewModel(app: Application) : AndroidViewModel(app) {
         } finally { _scanning.value = false }
     }
     fun open(file: MediaFile) { _current.value = file }
+
+    // A queue request is consumed by the Media3 player screen and inserted
+    // immediately after the currently playing item.
+    fun queueNext(file: MediaFile) {
+        if (_current.value == null) {
+            _current.value = file
+            _playNextRequest.value = null
+        } else if (_current.value?.uri != file.uri) {
+            _playNextRequest.value = file
+        }
+    }
+
+    fun clearPlayNextRequest(file: MediaFile) {
+        if (_playNextRequest.value?.uri == file.uri) _playNextRequest.value = null
+    }
     fun toggleFavorite(file: MediaFile) {
         val key = file.uri.toString()
         val next = if (key in _favorites.value) _favorites.value - key else _favorites.value + key
