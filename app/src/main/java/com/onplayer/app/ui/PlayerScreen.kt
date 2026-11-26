@@ -2,6 +2,8 @@ package com.onplayer.app.ui
 
 import android.content.Intent
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import android.view.ViewGroup
 import androidx.compose.foundation.background
@@ -46,7 +48,7 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
     }
     if (file.category == MediaCategory.Images) { ImagePreview(file, files, vm, nav); return }
     val player = remember(file.uri) { ExoPlayer.Builder(context).build().apply { setMediaItem(MediaItem.fromUri(file.uri)); prepare(); playWhenReady = false } }
-    DisposableEffect(player) { onDispose { player.release() } }
+    DisposableEffect(player) { onDispose { sleepJob?.cancel(); player.release() } }
     val playable = remember(files) { files.filter { it.isPlayable } }
     val currentIndex = playable.indexOfFirst { it.uri == file.uri }
     var isPlaying by remember(file.uri) { mutableStateOf(false) }
@@ -61,6 +63,9 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
     var fullscreen by remember(file.uri) { mutableStateOf(false) }
     var queueOpen by remember(file.uri) { mutableStateOf(false) }
     var playerView by remember { mutableStateOf<PlayerView?>(null) }
+    val timerScope = rememberCoroutineScope()
+    var sleepDialog by remember { mutableStateOf(false) }
+    var sleepJob by remember(file.uri) { mutableStateOf<Job?>(null) }
     LaunchedEffect(player) {
         while (true) {
             position = player.currentPosition.coerceAtLeast(0L).toFloat()
@@ -82,6 +87,7 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
                 Text(if(file.category==MediaCategory.Audio) "Music player" else "Video player", color = Color(0xFFBDB6D6), style = MaterialTheme.typography.labelSmall)
             }
             IconButton(onClick = { queueOpen = true }) { Icon(Icons.Default.QueueMusic, null, tint = Color.White) }
+            IconButton(onClick = { sleepDialog = true }) { Icon(Icons.Default.Timer, null, tint = Color.White) }
             IconButton(onClick = { fullscreen = true }) { Icon(Icons.Default.Fullscreen, null, tint = Color.White) }
             IconButton(onClick = { rotation = (rotation + 90f) % 360f }) { Icon(Icons.Default.ScreenRotation, null, tint = Color.White) }
         }
@@ -123,6 +129,10 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
             }
         }
     }
+    if(sleepDialog) AlertDialog(onDismissRequest={sleepDialog=false},title={Text("Sleep timer")},text={Column {
+        listOf(15,30,45,60,90).forEach { minutes -> TextButton(onClick={sleepJob?.cancel();sleepJob=timerScope.launch{delay(minutes*60_000L);player.pause();isPlaying=false};sleepDialog=false},modifier=Modifier.fillMaxWidth()) { Text("Pause playback in ${minutes} minutes") } }
+        TextButton(onClick={sleepJob?.cancel();sleepJob=null;sleepDialog=false},modifier=Modifier.fillMaxWidth()) { Text("Cancel timer") }
+    }},confirmButton={TextButton(onClick={sleepDialog=false}){Text("Close")}})
     if(queueOpen) AlertDialog(onDismissRequest={queueOpen=false},title={Text("Play queue")},text={Column(Modifier.heightIn(max=420.dp)){playable.forEachIndexed { index, item -> Text(item.name,maxLines=1,modifier=Modifier.fillMaxWidth().clickable{playAt(index);queueOpen=false}.padding(vertical=10.dp),color=if(item.uri==file.uri)Color(0xFF9B4DFF)else MaterialTheme.colorScheme.onSurface) } }},confirmButton={TextButton(onClick={queueOpen=false}){Text("Close")}})
     if(fullscreen) Dialog(onDismissRequest={fullscreen=false},properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Box(Modifier.fillMaxSize().background(Color.Black)) {
