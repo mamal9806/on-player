@@ -2,7 +2,8 @@ package com.onplayer.app.data
 
 import android.net.Uri
 
-enum class MediaCategory(val label: String) { Images("Photos"), Videos("Videos"), Audio("Music") }
+enum class MediaCategory(val label: String) { Audio("Music") }
+
 data class MediaFile(
     val id: Long,
     val name: String,
@@ -10,13 +11,13 @@ data class MediaFile(
     val mime: String,
     val size: Long,
     val modified: Long,
-    val category: MediaCategory,
+    val category: MediaCategory = MediaCategory.Audio,
     val durationMs: Long = 0,
     val title: String? = null,
     val artist: String? = null,
     val album: String? = null
 ) {
-    val isPlayable get() = category == MediaCategory.Audio || category == MediaCategory.Videos
+    val isPlayable get() = true
     private fun cleanMetadata(value: String?): String? = value?.trim()?.takeIf {
         it.isNotBlank() && !it.equals("unknown", true) && !it.equals("<unknown>", true) && !it.equals("null", true)
     }
