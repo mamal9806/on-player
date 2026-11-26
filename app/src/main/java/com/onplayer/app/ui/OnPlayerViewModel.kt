@@ -24,6 +24,8 @@ class OnPlayerViewModel(app: Application) : AndroidViewModel(app) {
     val search: StateFlow<String> = _search.asStateFlow()
     private val _scanning = MutableStateFlow(false)
     val scanning: StateFlow<Boolean> = _scanning.asStateFlow()
+    private val _scanError = MutableStateFlow<String?>(null)
+    val scanError: StateFlow<String?> = _scanError.asStateFlow()
     private val _favorites = MutableStateFlow<Set<String>>(emptySet())
     val favorites: StateFlow<Set<String>> = _favorites.asStateFlow()
     private val _themeMode = MutableStateFlow("Dark")
@@ -38,8 +40,14 @@ class OnPlayerViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun scan() = viewModelScope.launch(Dispatchers.IO) {
         _scanning.value = true
-        try { _files.value = repo.scan() } catch (_: Exception) { _files.value = emptyList() }
-        finally { _scanning.value = false }
+        _scanError.value = null
+        try {
+            val found = repo.scan()
+            _files.value = found
+            if (found.isEmpty()) _scanError.value = "No media found. Check storage permissions or use Browse device files."
+        } catch (e: Exception) {
+            _scanError.value = e.message ?: "Could not scan storage."
+        } finally { _scanning.value = false }
     }
     fun open(file: MediaFile) { _current.value = file }
     fun toggleFavorite(file: MediaFile) {
