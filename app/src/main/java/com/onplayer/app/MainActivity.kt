@@ -81,7 +81,7 @@ class MainActivity : ComponentActivity() {
     val muted = if (light) MutedLight else MutedDark
     val colors = if (light) lightColorScheme(primary=Accent, background=bg, surface=card, onSurface=textColor, onBackground=textColor)
                 else darkColorScheme(primary=Accent, background=bg, surface=card, onSurface=textColor, onBackground=textColor)
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result -> if (result.values.any { it }) vm.scan() }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result -> if (result.values.any { it }) vm.scan() else vm.setScanError("Storage access was denied. Grant media permissions or use Browse device files.") }
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= 33) permissionLauncher.launch(arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_IMAGES))
         else permissionLauncher.launch(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE))
