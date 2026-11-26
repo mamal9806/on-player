@@ -127,12 +127,33 @@ class MainActivity : ComponentActivity() {
 @Composable private fun HomeScreen(files:List<MediaFile>, loading:Boolean, scanError:String?, vm:OnPlayerViewModel, nav:NavHostController, favorites:Set<String>, light:Boolean, fg:Color, muted:Color, card:Color) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) try {
-            context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            val mime = context.contentResolver.getType(uri) ?: "*/*"
-            val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            context.startActivity(Intent.createChooser(intent, "Open selected file"))
-        } catch (_: Exception) { }
+        if (uri != null) {
+            try { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { }
+            val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
+            val name = try {
+                context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) cursor.getString(0) else null
+                } ?: uri.lastPathSegment ?: "Selected file"
+            } catch (_: Exception) { uri.lastPathSegment ?: "Selected file" }
+            val category = when {
+                mime.startsWith("audio/") -> MediaCategory.Audio
+                mime.startsWith("video/") -> MediaCategory.Videos
+                mime.startsWith("image/") -> MediaCategory.Images
+                mime.contains("zip") || mime.contains("rar") || mime.contains("compressed") -> MediaCategory.Archives
+                else -> MediaCategory.Documents
+            }
+            if (category == MediaCategory.Audio || category == MediaCategory.Videos || category == MediaCategory.Images) {
+                vm.open(MediaFile(uri.hashCode().toLong(), name, uri, mime, 0L, System.currentTimeMillis()/1000L, category))
+                nav.navigate("player")
+            } else {
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    context.startActivity(Intent.createChooser(intent, "Open $name"))
+                } catch (_: Exception) {
+                    android.widget.Toast.makeText(context, "No app can open this file", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
     val counts=MediaCategory.values().associateWith { c -> files.count { it.category==c } }
     Column(Modifier.fillMaxSize().padding(bottom=88.dp).padding(horizontal=16.dp)) {
