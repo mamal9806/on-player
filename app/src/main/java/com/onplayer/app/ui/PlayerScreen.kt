@@ -71,7 +71,7 @@ fun PlayerScreen(file:MediaFile?,files:List<MediaFile>,vm:OnPlayerViewModel,play
     val purple=Color(0xFFB18AFF)
     if(file==null) {
         Box(Modifier.fillMaxSize().background(Color(0xFF090A12)),contentAlignment=Alignment.Center) {
-            Column(horizontalAlignment=Alignment.Center) { Icon(Icons.Default.MusicNote,tint=purple,modifier=Modifier.size(58.dp)); Text("Choose a song",color=fg,modifier=Modifier.padding(top=12.dp)); TextButton(onClick=onBack){Text("Back")} }
+            Column(horizontalAlignment=Alignment.CenterHorizontally) { Icon(Icons.Default.MusicNote,contentDescription=null,tint=purple,modifier=Modifier.size(58.dp)); Text("Choose a song",color=fg,modifier=Modifier.padding(top=12.dp)); TextButton(onClick=onBack){Text("Back")} }
         }
         return
     }
@@ -86,7 +86,7 @@ fun PlayerScreen(file:MediaFile?,files:List<MediaFile>,vm:OnPlayerViewModel,play
     var duration by remember{mutableLongStateOf(0L)}
     var shuffle by remember{mutableStateOf(player.shuffleModeEnabled)}
     var repeatOne by remember{mutableStateOf(player.repeatMode==Player.REPEAT_MODE_ONE)}
-    val pulse=rememberInfiniteTransition(label="artwork pulse").animateFloat(initial=1f,targetValue=1.025f,animationSpec=infiniteRepeatable(tween(2200),RepeatMode.Reverse),label="art scale").value
+    val pulse=rememberInfiniteTransition(label="artwork pulse").animateFloat(initialValue=1f,targetValue=1.025f,animationSpec=infiniteRepeatable(tween(2200),RepeatMode.Reverse),label="art scale").value
     DisposableEffect(player) {
         val listener=object:Player.Listener {
             override fun onIsPlayingChanged(isPlaying:Boolean){playing=isPlaying}
