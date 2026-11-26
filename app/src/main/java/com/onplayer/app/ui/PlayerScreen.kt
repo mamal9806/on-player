@@ -122,7 +122,7 @@ private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnP
     val timerScope = rememberCoroutineScope()
     var sleepDialog by remember { mutableStateOf(false) }
     var sleepJob by remember(file.uri) { mutableStateOf<Job?>(null) }
-    DisposableEffect(file.uri) { onDispose { sleepJob?.cancel() } } }
+    DisposableEffect(file.uri) { onDispose { sleepJob?.cancel() } }
     val playable = remember(files) { files.filter { it.isPlayable } }
     val currentIndex = playable.indexOfFirst { it.uri == file.uri }
     var isPlaying by remember(file.uri) { mutableStateOf(false) }
