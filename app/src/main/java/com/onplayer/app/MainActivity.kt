@@ -188,13 +188,13 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
                     Text("ON PLAYER",color=Purple,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=2.sp)
                     Text("Good music.\nNo distractions.",color=fg,fontSize=28.sp,fontWeight=FontWeight.Bold,lineHeight=33.sp)
                 }
-                Box(Modifier.size(54.dp).clip(RoundedCornerShape(18.dp)).background(Brush.linearGradient(listOf(Color(0xFF754DCA),Color(0xFF252C5C)))),contentAlignment=Alignment.Center) { Icon(Icons.Default.Headphones,color=Color.White,modifier=Modifier.size(28.dp),contentDescription=null) }
+                Box(Modifier.size(54.dp).clip(RoundedCornerShape(18.dp)).background(Brush.linearGradient(listOf(Color(0xFF754DCA),Color(0xFF252C5C)))),contentAlignment=Alignment.Center) { Icon(Icons.Default.Headphones,contentDescription=null,modifier=Modifier.size(28.dp),tint=Color.White) }
             }
         }
         item {
             last?.let { FeaturedTrack(it,playing,dark,onOpenSong) } ?: Card(shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=surface)) {
                 Column(Modifier.fillMaxWidth().padding(24.dp),horizontalAlignment=Alignment.Start) {
-                    Icon(Icons.Default.MusicNote,tint=Purple,modifier=Modifier.size(42.dp))
+                    Icon(Icons.Default.MusicNote,contentDescription=null,tint=Purple,modifier=Modifier.size(42.dp))
                     Text("Your music awaits",color=fg,fontSize=20.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp))
                     Text("Choose a song to start listening.",color=muted)
                     Button(onClick=onPick,modifier=Modifier.padding(top=14.dp)) { Icon(Icons.Default.FolderOpen,null); Spacer(Modifier.width(6.dp)); Text("Choose music") }
@@ -218,7 +218,7 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
 @Composable
 private fun FeaturedTrack(file:MediaFile,playing:Boolean,dark:Boolean,onOpen:(MediaFile)->Unit) {
     val artwork by rememberArtwork(file.uri)
-    val shimmer=rememberInfiniteTransition(label="playing pulse").animateFloat(initial=0.94f,targetValue=1f,animationSpec=infiniteRepeatable(tween(1100),RepeatMode.Reverse),label="scale").value
+    val shimmer=rememberInfiniteTransition(label="playing pulse").animateFloat(initialValue=0.94f,targetValue=1f,animationSpec=infiniteRepeatable(tween(1100),RepeatMode.Reverse),label="scale").value
     Box(Modifier.fillMaxWidth().height(300.dp).clip(RoundedCornerShape(30.dp)).background(Brush.linearGradient(listOf(Color(0xFF2E244A),Color(0xFF141521),Color(0xFF11121A)))).clickable{onOpen(file)}) {
         artwork?.let{Image(it.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)}
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xE9090A12),Color(0xFF090A12))))) {}
@@ -234,7 +234,7 @@ private fun FeaturedTrack(file:MediaFile,playing:Boolean,dark:Boolean,onOpen:(Me
 @Composable
 private fun QuickAction(title:String,count:Int,icon:androidx.compose.ui.graphics.vector.ImageVector,modifier:Modifier,dark:Boolean,fg:Color,onClick:()->Unit) {
     Card(modifier.clickable(onClick=onClick),shape=RoundedCornerShape(22.dp),colors=CardDefaults.cardColors(containerColor=if(dark)CardDark else Color.White)) {
-        Column(Modifier.padding(16.dp)) { Icon(icon,tint=Purple,modifier=Modifier.size(23.dp)); Text(count.toString(),color=fg,fontSize=25.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp)); Text(title,color=Subtle,fontSize=12.sp) }
+        Column(Modifier.padding(16.dp)) { Icon(icon,contentDescription=null,tint=Purple,modifier=Modifier.size(23.dp)); Text(count.toString(),color=fg,fontSize=25.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp)); Text(title,color=Subtle,fontSize=12.sp) }
     }
 }
 
@@ -245,7 +245,7 @@ private fun SongListTab(title:String,songs:List<MediaFile>,loading:Boolean,error
         if(loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         if(error!=null) Text(error,color=muted,modifier=Modifier.padding(bottom=8.dp))
         if(songs.isEmpty()) {
-            Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) { Column(horizontalAlignment=Alignment.Center) { Icon(Icons.Default.MusicNote,tint=Purple,modifier=Modifier.size(48.dp)); Text(emptyText,color=muted,modifier=Modifier.padding(top=12.dp)); Button(onClick=onPick,modifier=Modifier.padding(top=12.dp)){Text("Pick a song")} } }
+            Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) { Column(horizontalAlignment=Alignment.CenterHorizontally) { Icon(Icons.Default.MusicNote,contentDescription=null,tint=Purple,modifier=Modifier.size(48.dp)); Text(emptyText,color=muted,modifier=Modifier.padding(top=12.dp)); Button(onClick=onPick,modifier=Modifier.padding(top=12.dp)){Text("Pick a song")} } }
         } else LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { items(songs,key={it.uri.toString()}) { SongRow(it,dark,fg,muted,onClick={onOpenSong(it)}) } }
         Row(Modifier.fillMaxWidth().padding(vertical=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick=onRefresh,modifier=Modifier.weight(1f)) { Icon(Icons.Default.Refresh,null);Spacer(Modifier.width(4.dp));Text("Rescan") }
@@ -269,9 +269,9 @@ private fun SearchTab(files:List<MediaFile>,favorites:Set<String>,dark:Boolean,f
 private fun SongRow(file:MediaFile,dark:Boolean,fg:Color,muted:Color,onClick:()->Unit,favorite:Boolean=false,onFavorite:()->Unit={}) {
     val art by rememberArtwork(file.uri)
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(if(dark)CardDark else Color.White).clickable(onClick=onClick).padding(10.dp),verticalAlignment=Alignment.CenterVertically) {
-        Box(Modifier.size(54.dp).clip(RoundedCornerShape(15.dp)).background(Brush.linearGradient(listOf(Color(0xFF6747AD),Color(0xFF1D355E)))),contentAlignment=Alignment.Center) { if(art!=null) Image(art!!.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop) else Icon(Icons.Default.MusicNote,tint=Color.White) }
+        Box(Modifier.size(54.dp).clip(RoundedCornerShape(15.dp)).background(Brush.linearGradient(listOf(Color(0xFF6747AD),Color(0xFF1D355E)))),contentAlignment=Alignment.Center) { if(art!=null) Image(art!!.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop) else Icon(Icons.Default.MusicNote,contentDescription=null,tint=Color.White) }
         Column(Modifier.weight(1f).padding(horizontal=12.dp)) { Text(file.displayTitle,color=fg,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis);Text(file.displayArtist,color=muted,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis) }
-        if(favorite) IconButton(onClick=onFavorite) { Icon(Icons.Default.Favorite,color=Color(0xFFEE79A8),contentDescription="Remove favorite") }
+        if(favorite) IconButton(onClick=onFavorite) { Icon(Icons.Default.Favorite,contentDescription="Remove favorite",tint=Color(0xFFEE79A8)) }
         else Icon(Icons.Default.PlayCircleOutline,tint=Purple,contentDescription="Play")
     }
 }
@@ -294,7 +294,7 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
         listOf("Dark","Light","System","AMOLED Black").forEach { mode ->
             Row(Modifier.fillMaxWidth().padding(vertical=5.dp).clip(RoundedCornerShape(16.dp)).background(if(dark)CardDark else Color.White).clickable{vm.setTheme(mode)}.padding(16.dp),verticalAlignment=Alignment.CenterVertically) {
                 Text(mode,color=fg,modifier=Modifier.weight(1f))
-                if(theme==mode) Icon(Icons.Default.CheckCircle,color=Purple,contentDescription="Selected")
+                if(theme==mode) Icon(Icons.Default.CheckCircle,contentDescription="Selected",tint=Purple)
             }
         }
         Spacer(Modifier.height(22.dp))
