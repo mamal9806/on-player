@@ -13,6 +13,7 @@ import kotlin.math.abs
 import android.view.ViewGroup
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -95,7 +96,7 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
         return
     }
     LaunchedEffect(controller, file.uri) {
-        controller.setMediaItem(MediaItem.Builder().setUri(file.uri).setMediaMetadata(MediaMetadata.Builder().setTitle(file.name).setArtist(if (file.category == MediaCategory.Audio) "On Player" else "Video").build()).build()
+        controller.setMediaItem(MediaItem.Builder().setUri(file.uri).setMediaMetadata(MediaMetadata.Builder().setTitle(file.name).setArtist(if (file.category == MediaCategory.Audio) "On Player" else "Video").build()).build())
         controller.prepare()
         controller.playWhenReady = false
     }
