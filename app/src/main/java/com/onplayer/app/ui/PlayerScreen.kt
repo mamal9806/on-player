@@ -67,10 +67,16 @@ private fun rememberAudioMeta(file:MediaFile):AudioMeta {
             val retriever=MediaMetadataRetriever()
             try {
                 retriever.setDataSource(context,file.uri)
-                val title=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)?:file.name
-                val artist=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)?: "Unknown artist"
-                val album=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)?: ""
-                val art=retriever.embeddedPicture?.let { BitmapFactory.decodeByteArray(it,0,it.size) }
+                val rawTitle=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)?.trim()
+                val title=rawTitle?.takeIf { it.isNotBlank() && !it.equals("unknown",true) } ?: file.name.substringBeforeLast('.',file.name)
+                val rawArtist=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)?.trim()
+                val artist=rawArtist?.takeIf { it.isNotBlank() && !it.equals("unknown",true) } ?: "Unknown artist"
+                val rawAlbum=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)?.trim()
+                val album=rawAlbum?.takeIf { it.isNotBlank() && !it.equals("unknown",true) } ?: ""
+                val art=retriever.embeddedPicture?.let { bytes ->
+                    val options=BitmapFactory.Options().apply { inSampleSize=2 }
+                    BitmapFactory.decodeByteArray(bytes,0,bytes.size,options)
+                }
                 AudioMeta(title,artist,album,art)
             } catch (_:Exception) { initial } finally { try { retriever.release() } catch (_:Exception) {} }
         }
