@@ -492,6 +492,7 @@ fun PlayerScreen(
             LiquidSeekBar(
                 positionMs = position,
                 durationMs = duration,
+                accent = dynamicAccent,
                 onSeek = { target -> position = target },
                 onSeekFinished = { player.seekTo(it) }
             )
@@ -536,6 +537,7 @@ fun PlayerScreen(
                 )
                 GlassPlayButton(
                     playing = playing,
+                    accent = dynamicAccent,
                     onClick = { if (player.isPlaying) player.pause() else player.play() }
                 )
                 GlassIconButton(
@@ -611,7 +613,7 @@ private fun GlassIconButton(
         Icon(
             icon,
             contentDescription = description,
-            tint = if (active) dynamicAccent else Color.White.copy(alpha = 0.94f),
+            tint = if (active) Color(0xFFFF6B83) else Color.White.copy(alpha = 0.94f),
             modifier = Modifier.size(if (diameter >= 50.dp) 28.dp else 21.dp)
         )
     }
@@ -654,6 +656,7 @@ private fun GlassPlayButton(playing: Boolean, accent: Color, onClick: () -> Unit
 private fun LiquidSeekBar(
     positionMs: Long,
     durationMs: Long,
+    accent: Color,
     onSeek: (Long) -> Unit,
     onSeekFinished: (Long) -> Unit
 ) {
