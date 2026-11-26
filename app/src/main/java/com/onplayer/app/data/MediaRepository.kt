@@ -38,7 +38,11 @@ class MediaRepository(private val context: Context) {
                 }
             }
         }
-        return results\n            .filter { it.category == MediaCategory.Images || it.category == MediaCategory.Videos || it.category == MediaCategory.Audio }\n            // Collapse MediaStore aliases that represent the same visible media item.\n            .distinctBy { "${it.category}|${it.name.trim().lowercase()}|${it.size}|${it.modified}" }\n            .sortedByDescending { it.modified }
+        return results
+            .filter { it.category == MediaCategory.Images || it.category == MediaCategory.Videos || it.category == MediaCategory.Audio }
+            // Collapse MediaStore aliases that represent the same visible media item.
+            .distinctBy { "${it.category}|${it.name.trim().lowercase()}|${it.size}|${it.modified}" }
+            .sortedByDescending { it.modified }
     }
 
     private inline fun safely(block: () -> Unit) {
