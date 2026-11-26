@@ -15,7 +15,13 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -78,7 +84,7 @@ class MainActivity : ComponentActivity() {
         else permissionLauncher.launch(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE))
     }
     MaterialTheme(colorScheme=colors) {
-        Box(Modifier.fillMaxSize().background(bg)) {
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(if (light) Color(0xFFF7F5FF) else Color(0xFF11101D), bg, if (light) Color(0xFFEDE9FF) else Color(0xFF08080F))))) {
             NavHost(navController=nav, startDestination="home", modifier=Modifier.fillMaxSize()) {
                 composable("home") { HomeScreen(files, scanning, vm, nav, favorites, light, textColor, muted, card) }
                 composable("library") { LibraryScreen(files, vm, nav, favorites, light, textColor, muted) }
@@ -101,7 +107,7 @@ class MainActivity : ComponentActivity() {
 @Composable private fun BottomBar(nav: NavHostController, modifier: Modifier, light: Boolean, onNav: (String)->Unit) {
     val route = nav.currentBackStackEntryAsState().value?.destination?.route
     val inactive = if (light) Color(0xFF777783) else MutedDark
-    Row(modifier.fillMaxWidth().padding(horizontal=12.dp, vertical=10.dp).background(if(light) Color.White else Color(0xEE171722), RoundedCornerShape(28.dp)).padding(8.dp), horizontalArrangement=Arrangement.SpaceAround, verticalAlignment=Alignment.CenterVertically) {
+    Row(modifier.fillMaxWidth().padding(horizontal=12.dp, vertical=10.dp).background(Brush.horizontalGradient(if(light) listOf(Color(0xEFFFFFFF),Color(0xDDF0EDFF),Color(0xEEFFFFFF)) else listOf(Color(0xCC26243A),Color(0xCC171722),Color(0xCC26243A))), RoundedCornerShape(28.dp)).border(1.dp, if(light) Color.White.copy(alpha=.8f) else Color.White.copy(alpha=.12f), RoundedCornerShape(28.dp)).padding(8.dp), horizontalArrangement=Arrangement.SpaceAround, verticalAlignment=Alignment.CenterVertically) {
         BottomItem("Home", Icons.Default.Home, route=="home", inactive, onNav, "home")
         BottomItem("Files", Icons.Default.Folder, route=="library", inactive, onNav, "library")
         IconButton(onClick={onNav("player")}, modifier=Modifier.size(56.dp).background(Brush.linearGradient(listOf(Accent,Color(0xFF5D36CC))),RoundedCornerShape(50))) { Icon(Icons.Default.PlayArrow,null,tint=Color.White,modifier=Modifier.size(32.dp)) }
@@ -139,7 +145,9 @@ class MainActivity : ComponentActivity() {
 @Composable private fun AppLogo(size: androidx.compose.ui.unit.Dp) { Box(Modifier.size(size).background(Brush.linearGradient(listOf(Color(0xFF5144FF),Color(0xFF9C29E8))),RoundedCornerShape(size*.28f)),contentAlignment=Alignment.Center){Icon(Icons.Default.PlayArrow,null,tint=Color.White,modifier=Modifier.size(size*.58f))} }
 @Composable private fun CategoryTile(cat:MediaCategory,count:Int,modifier:Modifier,light:Boolean,fg:Color,muted:Color,onClick:()->Unit) {
     val (icon,color)=when(cat){MediaCategory.Images->Icons.Default.Image to Color(0xFF9D52FF);MediaCategory.Videos->Icons.Default.VideoLibrary to Color(0xFFFF4F91);MediaCategory.Audio->Icons.Default.MusicNote to Color(0xFF4C9DFF);MediaCategory.Documents->Icons.Default.Description to Color(0xFF37B98D);MediaCategory.Archives->Icons.Default.FolderZip to Color(0xFFFFBE39);else->Icons.Default.FolderOpen to Accent}
-    Column(modifier.height(112.dp).background(if(light) Color.White else Color(0xFF171722),RoundedCornerShape(20.dp)).clickable{onClick()}.padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){Icon(icon,null,tint=color,modifier=Modifier.size(30.dp));Text(cat.label,color=fg,fontSize=13.sp,fontWeight=FontWeight.Medium,modifier=Modifier.padding(top=5.dp));Text("$count items",color=muted,fontSize=11.sp)}
+    val transition = rememberInfiniteTransition(label="tile-glow")
+    val glow = transition.animateFloat(initialValue=.12f,targetValue=.25f,animationSpec=infiniteRepeatable(tween(1800),RepeatMode.Reverse),label="glow")
+    Column(modifier.animateContentSize().height(112.dp).background(Brush.linearGradient(if(light) listOf(Color.White,Color(0xFFF0EBFF)) else listOf(Color(0xCC252236),Color(0xCC171722))),RoundedCornerShape(20.dp)).border(1.dp,if(light) Color.White.copy(alpha=.9f) else Color.White.copy(alpha=glow.value),RoundedCornerShape(20.dp)).clickable{onClick()}.padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){Icon(icon,null,tint=color,modifier=Modifier.size(30.dp));Text(cat.label,color=fg,fontSize=13.sp,fontWeight=FontWeight.Medium,modifier=Modifier.padding(top=5.dp));Text("$count items",color=muted,fontSize=11.sp)}
 }
 @Composable private fun FilePreview(file:MediaFile,icon:androidx.compose.ui.graphics.vector.ImageVector) {
     val context=androidx.compose.ui.platform.LocalContext.current
