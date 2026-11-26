@@ -271,6 +271,12 @@ class OnPlayerViewModel(app: Application) : AndroidViewModel(app) {
             val app = getApplication<Application>()
             app.onPlayerDataStore.edit { prefs ->
                 prefs[FAVORITES_KEY] = _favorites.value.joinToString("\\n")
+                if (prefs[LAST_PLAYED_URI_KEY] == key) {
+                    prefs.remove(LAST_PLAYED_URI_KEY)
+                    prefs.remove(LAST_PLAYED_NAME_KEY)
+                    prefs.remove(LAST_PLAYED_MIME_KEY)
+                    prefs.remove(LAST_PLAYED_CATEGORY_KEY)
+                }
                 val titles = JSONObject()
                 _customTitles.value.filterKeys { it != key }.forEach { (uri, title) -> titles.put(uri, title) }
                 prefs[CUSTOM_TITLES_KEY] = titles.toString()
@@ -278,6 +284,7 @@ class OnPlayerViewModel(app: Application) : AndroidViewModel(app) {
         }
         _customTitles.value = _customTitles.value - key
         if (_current.value?.uri == file.uri) _current.value = null
+        if (_lastPlayed.value?.uri == file.uri) _lastPlayed.value = null
     }
 
     fun setTheme(value: String) {
