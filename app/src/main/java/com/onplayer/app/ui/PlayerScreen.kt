@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -94,7 +95,7 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
         return
     }
     LaunchedEffect(controller, file.uri) {
-        controller.setMediaItem(MediaItem.fromUri(file.uri))
+        controller.setMediaItem(MediaItem.Builder().setUri(file.uri).setMediaMetadata(MediaMetadata.Builder().setTitle(file.name).setArtist(if (file.category == MediaCategory.Audio) "On Player" else "Video").build()).build()
         controller.prepare()
         controller.playWhenReady = false
     }
@@ -264,7 +265,7 @@ private fun formatPlayerTime(ms: Long): String {
             scale = 1f; rotation = 0f; panX = 0f; panY = 0f; swipeHandled = false
         }
     }
-    Column(Modifier.fillMaxSize().padding(bottom = 90.dp)) {
+    Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xCC332B50),Color(0xAA181824))), RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp)).border(1.dp,Color.White.copy(alpha=.12f),RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp)), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
             Column(Modifier.weight(1f)) {
