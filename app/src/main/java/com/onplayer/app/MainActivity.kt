@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -247,7 +248,7 @@ private fun SongListTab(title:String,songs:List<MediaFile>,loading:Boolean,error
         if(loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         if(error!=null) Text(error,color=muted,modifier=Modifier.padding(bottom=8.dp))
         if(songs.isEmpty()) {
-            Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) { Column(horizontalAlignment=Alignment.Center) { Icon(Icons.Default.MusicOff,tint=Purple,modifier=Modifier.size(48.dp)); Text(emptyText,color=muted,modifier=Modifier.padding(top=12.dp)); Button(onClick=onPick,modifier=Modifier.padding(top=12.dp)){Text("Pick a song")} } }
+            Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) { Column(horizontalAlignment=Alignment.Center) { Icon(Icons.Default.MusicNote,tint=Purple,modifier=Modifier.size(48.dp)); Text(emptyText,color=muted,modifier=Modifier.padding(top=12.dp)); Button(onClick=onPick,modifier=Modifier.padding(top=12.dp)){Text("Pick a song")} } }
         } else LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { items(songs,key={it.uri.toString()}) { SongRow(it,dark,fg,muted,onClick={onOpenSong(it)}) } }
         Row(Modifier.fillMaxWidth().padding(vertical=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick=onRefresh,modifier=Modifier.weight(1f)) { Icon(Icons.Default.Refresh,null);Spacer(Modifier.width(4.dp));Text("Rescan") }
