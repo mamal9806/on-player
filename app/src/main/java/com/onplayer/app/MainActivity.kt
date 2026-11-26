@@ -167,8 +167,6 @@ class MainActivity : ComponentActivity() {
             IconButton(onClick={nav.navigate("search")}){Icon(Icons.Default.Search,null,tint=fg)}; IconButton(onClick={nav.navigate("settings")}){Icon(Icons.Default.Settings,null,tint=fg)}
         }
         }
-        val heroMotion = rememberInfiniteTransition(label="hero-glass")
-        val heroGlow by heroMotion.animateFloat(initialValue=0.10f,targetValue=0.24f,animationSpec=infiniteRepeatable(tween(2400),RepeatMode.Reverse),label="hero-glow")
         Card(Modifier.fillMaxWidth().height(156.dp).border(1.dp,if(light) Color.White.copy(alpha=.92f) else Color.White.copy(alpha=.16f),RoundedCornerShape(28.dp)),shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=if(light) Color.White.copy(alpha=.68f) else Color(0x661C1A2A))) {
             Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Accent.copy(alpha=.30f),if(light) Color(0xBBFFFFFF) else Color(0xAA27213F),card)))) {
                 Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0x555D9CFF),Color.Transparent),center=androidx.compose.ui.geometry.Offset(900f,0f),radius=700f)))
