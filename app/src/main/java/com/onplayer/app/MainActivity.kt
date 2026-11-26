@@ -1,8 +1,10 @@
 package com.onplayer.app
 
 import android.Manifest
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -11,6 +13,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -50,6 +53,8 @@ import com.onplayer.app.data.MediaCategory
 import com.onplayer.app.data.MediaFile
 import com.onplayer.app.ui.OnPlayerViewModel
 import com.onplayer.app.ui.PlayerScreen
+import com.onplayer.app.work.ACTION_LIBRARY_CHANGED
+import com.onplayer.app.work.AutoLibraryScanScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -82,6 +87,21 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
     var tab by remember { mutableStateOf(Tab.Home) }
     var playerOpen by remember { mutableStateOf(false) }
     val controller = rememberRootController()
+
+    DisposableEffect(context, vm) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: android.content.Context?, intent: Intent?) {
+                vm.scan()
+            }
+        }
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            IntentFilter(ACTION_LIBRARY_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        onDispose { runCatching { context.unregisterReceiver(receiver) } }
+    }
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
     val dark = themeMode != "Light" && (themeMode != "System" || systemDark)
     val background = if (dark) Deep else Color(0xFFF5F4FA)
@@ -106,8 +126,17 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-        if (result.values.any { it }) vm.scan()
-        else vm.setScanError("Music permission denied. You can still open a song from the file picker.")
+        val audioPermissionGranted = if (Build.VERSION.SDK_INT >= 33) {
+            result[Manifest.permission.READ_MEDIA_AUDIO] == true
+        } else {
+            result[Manifest.permission.READ_EXTERNAL_STORAGE] == true
+        }
+        if (audioPermissionGranted) {
+            vm.scan()
+            AutoLibraryScanScheduler.ensureScheduled(context)
+        } else {
+            vm.setScanError("Music permission denied. You can still open a song from the file picker.")
+        }
     }
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= 33) {
