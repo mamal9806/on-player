@@ -40,8 +40,8 @@ class MediaRepository(private val context: Context) {
         }
         return results
             .filter { it.category == MediaCategory.Images || it.category == MediaCategory.Videos || it.category == MediaCategory.Audio }
-            // Collapse MediaStore aliases that represent the same visible media item.
-            .distinctBy { "${it.category}|${it.name.trim().lowercase()}|${it.size}" }
+            // Deduplicate only identical content URIs; filenames and sizes can legitimately repeat.
+            .distinctBy { it.uri.toString() }
             .sortedByDescending { it.modified }
     }
 
