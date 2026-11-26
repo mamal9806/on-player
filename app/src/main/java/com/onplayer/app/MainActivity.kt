@@ -7,6 +7,7 @@ import android.provider.MediaStore
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.util.LruCache
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import androidx.activity.ComponentActivity
@@ -172,7 +173,6 @@ class MainActivity : ComponentActivity() {
                 Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0x555D9CFF),Color.Transparent),center=androidx.compose.ui.geometry.Offset(900f,0f),radius=700f)))
                 Column(Modifier.align(Alignment.CenterStart).padding(20.dp)) { Text("Everything you love",fontSize=22.sp,fontWeight=FontWeight.Bold,color=fg); Text("Photos · Videos · Music",color=muted,modifier=Modifier.padding(top=5.dp)); Button(onClick={nav.navigate("library")},modifier=Modifier.padding(top=10.dp),colors=ButtonDefaults.buttonColors(containerColor=Accent)){Text("Open library")} }
                 Icon(Icons.Default.PlayCircle,null,tint=Accent.copy(alpha=.52f),modifier=Modifier.align(Alignment.CenterEnd).padding(end=18.dp).size(72.dp))
-                Box(Modifier.align(Alignment.TopEnd).padding(12.dp).size(10.dp).background(Color.White.copy(alpha=.5f+heroGlow),RoundedCornerShape(50)))
             }
         }
         Row(Modifier.fillMaxWidth().padding(top=10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -188,21 +188,86 @@ class MainActivity : ComponentActivity() {
         LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)){ items(files.take(10),key={it.uri.toString()}) { FileRow(it,vm,nav,favorites,light,fg,muted) } }
     }
 }
-@Composable private fun AppLogo(size: androidx.compose.ui.unit.Dp) { Box(Modifier.size(size).background(Brush.linearGradient(listOf(Color(0xFF261A55),Color(0xFF7C3AED),Color(0xFF2D58D8))),RoundedCornerShape(size*.32f)).border(1.dp,Color.White.copy(alpha=.26f),RoundedCornerShape(size*.32f)),contentAlignment=Alignment.Center){ Icon(Icons.Default.GraphicEq,null,tint=Color.White,modifier=Modifier.size(size*.58f)) } }
+@Composable private fun AppLogo(size: androidx.compose.ui.unit.Dp) {
+    Box(
+        Modifier.size(size)
+            .background(
+                Brush.linearGradient(listOf(Color(0xFF17152F), Color(0xFF6538D6), Color(0xFF263E9F))),
+                RoundedCornerShape(size * .30f)
+            )
+            .border(1.dp, Color.White.copy(alpha = .30f), RoundedCornerShape(size * .30f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            Modifier.size(size * .76f)
+                .background(
+                    Brush.linearGradient(listOf(Color(0xFF9B7BFF), Color(0xFF5E42D8))),
+                    RoundedCornerShape(50)
+                )
+                .border(1.dp, Color.White.copy(alpha = .42f), RoundedCornerShape(50)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.PlayArrow,
+                contentDescription = "On Player",
+                tint = Color.White,
+                modifier = Modifier.size(size * .52f)
+            )
+        }
+    }
+}
 @Composable private fun CategoryTile(cat:MediaCategory,count:Int,modifier:Modifier,light:Boolean,fg:Color,muted:Color,onClick:()->Unit) {
     val (icon,color)=when(cat){MediaCategory.Images->Icons.Default.Image to Color(0xFF9D52FF);MediaCategory.Videos->Icons.Default.VideoLibrary to Color(0xFFFF4F91);MediaCategory.Audio->Icons.Default.MusicNote to Color(0xFF4C9DFF)}
     Column(modifier.animateContentSize().height(112.dp).background(Brush.linearGradient(if(light) listOf(Color.White,Color(0xFFF0EBFF)) else listOf(Color(0xCC252236),Color(0xCC171722))),RoundedCornerShape(20.dp)).border(1.dp,if(light) Color.White.copy(alpha=.9f) else Color.White.copy(alpha=.10f),RoundedCornerShape(20.dp)).clickable{onClick()}.padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){Icon(icon,null,tint=color,modifier=Modifier.size(30.dp));Text(cat.label,color=fg,fontSize=13.sp,fontWeight=FontWeight.Medium,modifier=Modifier.padding(top=5.dp));Text("$count items",color=muted,fontSize=11.sp)}
 }
+private object MediaThumbnailCache {
+    private val cache = object : LruCache<String, Bitmap>(12 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap): Int = (value.byteCount / 1024).coerceAtLeast(1)
+    }
+    fun get(key: String): Bitmap? = cache.get(key)
+    fun put(key: String, bitmap: Bitmap) { cache.put(key, bitmap) }
+}
+
 @Composable private fun FilePreview(file:MediaFile,icon:androidx.compose.ui.graphics.vector.ImageVector) {
     val context=androidx.compose.ui.platform.LocalContext.current
     val bitmap by produceState<Bitmap?>(null,file.uri,file.category) {
-        value=withContext(Dispatchers.IO) { try {
-            if(file.category==MediaCategory.Images) context.contentResolver.loadThumbnail(file.uri,android.util.Size(160,160),null)
-            else if(file.category==MediaCategory.Videos) { val r=MediaMetadataRetriever(); try {r.setDataSource(context,file.uri);r.getFrameAtTime(1_000_000,MediaMetadataRetriever.OPTION_CLOSEST_SYNC)} finally {r.release()} }
-            else null
-        } catch(_:Exception){null} }
+        value=withContext(Dispatchers.IO) {
+            val key = file.uri.toString()
+            MediaThumbnailCache.get(key) ?: try {
+                val thumbnail = when (file.category) {
+                    MediaCategory.Images -> context.contentResolver.loadThumbnail(file.uri, android.util.Size(112, 112), null)
+                    MediaCategory.Videos -> {
+                        val retriever = MediaMetadataRetriever()
+                        try {
+                            retriever.setDataSource(context, file.uri)
+                            val frame = retriever.getFrameAtTime(500_000L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                            if (frame == null) null else {
+                                val ratio = minOf(112f / frame.width, 112f / frame.height, 1f)
+                                if (ratio < 1f) {
+                                    val scaled = Bitmap.createScaledBitmap(
+                                        frame,
+                                        (frame.width * ratio).toInt().coerceAtLeast(1),
+                                        (frame.height * ratio).toInt().coerceAtLeast(1),
+                                        true
+                                    )
+                                    frame.recycle()
+                                    scaled
+                                } else frame
+                            }
+                        } finally { retriever.release() }
+                    }
+                    else -> null
+                }
+                if (thumbnail != null) MediaThumbnailCache.put(key, thumbnail)
+                thumbnail
+            } catch (_: Exception) { null }
+        }
     }
-    Box(Modifier.size(64.dp).background(Color(0x332D2946),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){ if(bitmap!=null) Image(bitmap!!.asImageBitmap(),file.name,Modifier.fillMaxSize(),contentScale=ContentScale.Crop) else Icon(icon,null,tint=Accent,modifier=Modifier.size(28.dp)); if(file.category==MediaCategory.Videos) Icon(Icons.Default.PlayCircle,null,tint=Color.White,modifier=Modifier.size(23.dp).align(Alignment.Center)) }
+    Box(Modifier.size(64.dp).background(Color(0x332D2946),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){
+        if(bitmap!=null) Image(bitmap!!.asImageBitmap(),file.displayTitle,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+        else Icon(icon,null,tint=Accent,modifier=Modifier.size(28.dp))
+        if(file.category==MediaCategory.Videos) Icon(Icons.Default.PlayCircle,null,tint=Color.White,modifier=Modifier.size(23.dp).align(Alignment.Center))
+    }
 }
 @Composable private fun FileRow(file:MediaFile,vm:OnPlayerViewModel,nav:NavHostController,favorites:Set<String>,light:Boolean,fg:Color,muted:Color) {
     val context=androidx.compose.ui.platform.LocalContext.current
@@ -250,9 +315,27 @@ class MainActivity : ComponentActivity() {
     }.padding(10.dp),verticalAlignment=Alignment.CenterVertically) {
         FilePreview(file,icon)
         Column(Modifier.weight(1f).padding(start=10.dp)) {
-            Text(file.name,color=fg,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.Medium)
-            Text("${file.sizeText} · ${file.category.label}",color=muted,fontSize=11.sp)
+            Text(file.displayTitle,color=fg,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.Medium)
+            Text(
+                if (file.category == MediaCategory.Audio) "${file.displayArtist} · ${file.sizeText}"
+                else "${file.sizeText} · ${file.category.label}",
+                color=muted,fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis
+            )
             Text(SimpleDateFormat("MMM d · HH:mm",Locale.getDefault()).format(Date(file.modified*1000)),color=muted,fontSize=10.sp)
+        }
+        if (file.category == MediaCategory.Audio) {
+            IconButton(onClick = {
+                val hadCurrentTrack = vm.current.value != null
+                vm.queueNext(file)
+                nav.navigate("player") { launchSingleTop = true }
+                android.widget.Toast.makeText(
+                    context,
+                    if (hadCurrentTrack) "Added to play next" else "Opening track",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }) {
+                Icon(Icons.Default.SkipNext, contentDescription = "Play next", tint = Accent)
+            }
         }
         IconButton(onClick={vm.toggleFavorite(file)}){Icon(if(file.uri.toString() in favorites)Icons.Default.Favorite else Icons.Default.FavoriteBorder,null,tint=Accent)}
         Box {
