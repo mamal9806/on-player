@@ -142,12 +142,12 @@ fun PlayerScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var renameText by remember(file.uri) { mutableStateOf(file.displayTitle) }
     var newPlaylistName by remember { mutableStateOf("") }
-    val pulse = rememberInfiniteTransition(label = "album glass pulse")
+    val discRotation = rememberInfiniteTransition(label = "disc rotation")
         .animateFloat(
-            initialValue = 1f,
-            targetValue = 1.018f,
-            animationSpec = infiniteRepeatable(tween(2600), RepeatMode.Reverse),
-            label = "album scale"
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(tween(9000, easing = androidx.compose.animation.core.LinearEasing)),
+            label = "disc rotation"
         ).value
 
     DisposableEffect(player) {
@@ -322,38 +322,7 @@ fun PlayerScreen(
         )
     }
 
-    Box(Modifier.fillMaxSize().background(Color(0xFF080912))) {
-        artwork.bitmap?.let { bitmap ->
-            Image(
-                bitmap.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f },
-                contentScale = ContentScale.Crop
-            )
-            Image(
-                bitmap.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.28f; scaleY = 1.28f },
-                contentScale = ContentScale.Crop
-            )
-        } ?: Box(
-            Modifier.fillMaxSize().background(
-                Brush.linearGradient(listOf(Color(0xFF48306F), Color(0xFF242846), Color(0xFF090A12)))
-            )
-        )
-
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color(0xCC080810),
-                        Color(0x4A171426),
-                        Color(0xAA171321),
-                        Color(0xF5080912)
-                    )
-                )
-            )
-        )
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF090A0F), Color(0xFF10131C), Color(0xFF050609))))) {
 
         // Soft, translucent highlights create a layered Liquid Glass atmosphere.
         Box(
@@ -388,7 +357,7 @@ fun PlayerScreen(
                     Modifier.weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("ON PLAYER", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.4.sp)
+                    Text("ON PLAYER", color = Color(0xFFFF536A), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.4.sp)
                     Text("Now Playing", color = secondary, fontSize = 12.sp)
                 }
                 Box {
@@ -426,53 +395,49 @@ fun PlayerScreen(
             Spacer(Modifier.weight(0.14f))
 
             Box(
-                Modifier.fillMaxWidth().aspectRatio(0.96f).padding(horizontal = 5.dp),
+                Modifier.fillMaxWidth().aspectRatio(0.96f).padding(horizontal = 5.dp)
+                    .pointerInput(file.uri) {
+                        var dragX = 0f
+                        detectDragGestures(
+                            onDragStart = { dragX = 0f },
+                            onDrag = { change, delta -> dragX += delta.x; change.consume() },
+                            onDragEnd = {
+                                if (dragX < -65f) player.seekToNextMediaItem()
+                                else if (dragX > 65f) player.seekToPreviousMediaItem()
+                            }
+                        )
+                    },
                 contentAlignment = Alignment.Center
             ) {
-                // Diffuse halo behind the album cover.
                 Box(
-                    Modifier.fillMaxSize(0.82f)
-                        .background(Color(0x667E6CC0), RoundedCornerShape(42.dp))
-                )
-                Box(
-                    Modifier.fillMaxSize()
-                        
-                        .shadow(28.dp, RoundedCornerShape(34.dp), clip = false)
-                        .clip(RoundedCornerShape(34.dp))
-                        .background(
-                            Brush.linearGradient(
-                                listOf(Color(0xFF8C75C8), Color(0xFF29385E), Color(0xFF17192A))
-                            )
-                        )
-                        .border(
-                            1.dp,
-                            Brush.linearGradient(
-                                listOf(Color.White.copy(alpha = 0.75f), Color.White.copy(alpha = 0.07f), Color.White.copy(alpha = 0.28f))
-                            ),
-                            RoundedCornerShape(34.dp)
-                        )
+                    Modifier.fillMaxSize(0.88f)
+                        .graphicsLayer { rotationZ = if (playing) discRotation else 0f }
+                        .clip(CircleShape)
+                        .background(Brush.radialGradient(listOf(Color(0xFF454650), Color(0xFF17181D), Color(0xFF08090D))))
+                        .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
-                    artwork.bitmap?.let { bitmap ->
-                        Image(
-                            bitmap.asImageBitmap(),
-                            contentDescription = "Album artwork",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Album, contentDescription = null, tint = Color.White.copy(alpha = 0.92f), modifier = Modifier.size(104.dp))
+                    Canvas(Modifier.fillMaxSize()) {
+                        val center = Offset(size.width / 2f, size.height / 2f)
+                        for (i in 1..14) {
+                            val radius = size.minDimension * (0.28f + i * 0.025f)
+                            drawCircle(Color.White.copy(alpha = if (i % 3 == 0) 0.13f else 0.035f), radius, center, style = Stroke(width = size.minDimension * 0.003f))
+                        }
+                        drawCircle(Color(0xFFB8BAC4).copy(alpha = 0.24f), size.minDimension * 0.49f, center, style = Stroke(width = size.minDimension * 0.012f))
                     }
                     Box(
-                        Modifier.fillMaxWidth().height(76.dp).align(Alignment.TopCenter)
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(Color.White.copy(alpha = 0.24f), Color.Transparent)
-                                )
-                            )
-                    )
+                        Modifier.fillMaxSize(0.42f).clip(CircleShape)
+                            .border(2.dp, Color(0xFF9B9DA5), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        artwork.bitmap?.let { bitmap ->
+                            Image(bitmap.asImageBitmap(), contentDescription = "Album cover",
+                                modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
+                        } ?: Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(52.dp))
+                        Box(Modifier.size(10.dp).clip(CircleShape).background(Color(0xFF111217)).border(1.dp, Color.White.copy(alpha = 0.5f), CircleShape))
+                    }
                 }
             }
-
             Spacer(Modifier.weight(0.13f))
 
             Row(
@@ -630,7 +595,7 @@ private fun GlassIconButton(
         Icon(
             icon,
             contentDescription = description,
-            tint = if (active) Color(0xFFE0C9FF) else Color.White.copy(alpha = 0.94f),
+            tint = if (active) Color(0xFFFF6B83) else Color.White.copy(alpha = 0.94f),
             modifier = Modifier.size(if (diameter >= 50.dp) 28.dp else 21.dp)
         )
     }
