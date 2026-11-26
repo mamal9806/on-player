@@ -179,7 +179,7 @@ class MainActivity : ComponentActivity() {
         }
         Row(Modifier.fillMaxWidth().padding(top=10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
             OutlinedButton(onClick={vm.scan()},modifier=Modifier.weight(1f),colors=ButtonDefaults.outlinedButtonColors(contentColor=fg)) { Icon(Icons.Default.Refresh,null); Spacer(Modifier.width(6.dp)); Text("Rescan") }
-            OutlinedButton(onClick={filePicker.launch(arrayOf("*/*"))},modifier=Modifier.weight(1f),colors=ButtonDefaults.outlinedButtonColors(contentColor=fg)) { Icon(Icons.Default.FolderOpen,null); Spacer(Modifier.width(6.dp)); Text("Browse device") }
+            OutlinedButton(onClick={filePicker.launch(arrayOf("image/*","video/*","audio/*"))},modifier=Modifier.weight(1f),colors=ButtonDefaults.outlinedButtonColors(contentColor=fg)) { Icon(Icons.Default.FolderOpen,null); Spacer(Modifier.width(6.dp)); Text("Browse device") }
         }
         if (scanError != null) Text(scanError, color=if(light) Color(0xFF8A4B00) else Color(0xFFFFC078), fontSize=12.sp, modifier=Modifier.padding(top=6.dp))
         Text("Your media",fontSize=18.sp,fontWeight=FontWeight.Bold,color=fg,modifier=Modifier.padding(top=18.dp,bottom=10.dp))
