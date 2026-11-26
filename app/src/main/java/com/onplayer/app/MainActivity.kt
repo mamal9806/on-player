@@ -105,7 +105,8 @@ class MainActivity : ComponentActivity() {
                 }
                 composable("search") { SearchScreen(files, vm, nav, favorites, light, textColor, muted) }
             }
-            BottomBar(nav, Modifier.align(Alignment.BottomCenter), light) { route -> nav.navigate(route) { launchSingleTop=true } }
+            val currentRoute = nav.currentBackStackEntryAsState().value?.destination?.route
+            if (currentRoute != "player") BottomBar(nav, Modifier.align(Alignment.BottomCenter), light) { route -> nav.navigate(route) { launchSingleTop=true } }
         }
     }
 }
@@ -116,7 +117,7 @@ class MainActivity : ComponentActivity() {
     val inactive = if (light) Color(0xFF777783) else MutedDark
     Row(modifier.fillMaxWidth().padding(horizontal=12.dp, vertical=10.dp).background(Brush.horizontalGradient(if(light) listOf(Color(0xEFFFFFFF),Color(0xDDF0EDFF),Color(0xEEFFFFFF)) else listOf(Color(0xCC26243A),Color(0xCC171722),Color(0xCC26243A))), RoundedCornerShape(28.dp)).border(1.dp, if(light) Color.White.copy(alpha=.8f) else Color.White.copy(alpha=.12f), RoundedCornerShape(28.dp)).padding(8.dp), horizontalArrangement=Arrangement.SpaceAround, verticalAlignment=Alignment.CenterVertically) {
         BottomItem("Home", Icons.Default.Home, route=="home", inactive, onNav, "home")
-        BottomItem("Files", Icons.Default.Folder, route=="library", inactive, onNav, "library")
+        BottomItem("Library", Icons.Default.Folder, route=="library", inactive, onNav, "library")
         IconButton(onClick={onNav("player")}, modifier=Modifier.size(56.dp).background(Brush.linearGradient(listOf(Accent,Color(0xFF5D36CC))),RoundedCornerShape(50))) { Icon(Icons.Default.PlayArrow,null,tint=Color.White,modifier=Modifier.size(32.dp)) }
         BottomItem("Favorites", Icons.Default.Favorite, route=="playlist", inactive, onNav, "playlist")
         BottomItem("Settings", Icons.Default.Settings, route=="settings", inactive, onNav, "settings")
