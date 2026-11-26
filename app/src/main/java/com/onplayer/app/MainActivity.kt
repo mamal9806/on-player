@@ -110,7 +110,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 @Composable private fun BottomItem(label:String, icon:androidx.compose.ui.graphics.vector.ImageVector, active:Boolean, inactive:Color, onNav:(String)->Unit, route:String) {
-    Column(Modifier.clickable { onNav(route) }.padding(horizontal=6.dp), horizontalAlignment=Alignment.Center) {
+    Column(Modifier.clickable { onNav(route) }.padding(horizontal=6.dp), horizontalAlignment=Alignment.CenterHorizontally) {
         Icon(icon,null,tint=if(active) Accent else inactive,modifier=Modifier.size(22.dp)); Text(label,color=if(active) Accent else inactive,fontSize=10.sp)
     }
 }
