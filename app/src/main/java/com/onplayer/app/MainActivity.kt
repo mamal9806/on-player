@@ -23,6 +23,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.animateContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -71,8 +72,9 @@ class MainActivity : ComponentActivity() {
     val scanning by vm.scanning.collectAsState()
     val favorites by vm.favorites.collectAsState()
     val themeMode by vm.themeMode.collectAsState()
-    val light = themeMode == "Light"
-    val bg = if (light) Color(0xFFF4F4F8) else DarkBg
+    val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val light = themeMode == "Light" || (themeMode == "System" && !systemDark)
+    val bg = if (light) Color(0xFFF4F4F8) else if (themeMode == "AMOLED Black") Color.Black else DarkBg
     val card = if (light) Color.White else DarkCard
     val textColor = if (light) Color(0xFF20202A) else Color.White
     val muted = if (light) MutedLight else MutedDark
@@ -135,7 +137,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         Text("Browse",fontSize=18.sp,fontWeight=FontWeight.Bold,color=fg,modifier=Modifier.padding(top=18.dp,bottom=10.dp))
-        val cats=listOf(MediaCategory.Images,MediaCategory.Videos,MediaCategory.Audio,MediaCategory.Documents,MediaCategory.Archives,MediaCategory.Others)
+        val cats=listOf(MediaCategory.Images,MediaCategory.Videos,MediaCategory.Audio,MediaCategory.Documents,MediaCategory.Archives,MediaCategory.APK,MediaCategory.Others)
         Column(verticalArrangement=Arrangement.spacedBy(8.dp)){ cats.chunked(3).forEach { row -> Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){row.forEach { c -> CategoryTile(c,counts[c]?:0,Modifier.weight(1f),light,fg,muted){nav.navigate("category/${c.name}")} } } } }
         Row(Modifier.fillMaxWidth().padding(top=18.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){ Text("Recent files",fontSize=19.sp,fontWeight=FontWeight.Bold,color=fg,modifier=Modifier.weight(1f)); Text("View all  ›",color=Accent,modifier=Modifier.clickable{nav.navigate("library")}) }
         if(loading) LinearProgressIndicator(Modifier.fillMaxWidth())
