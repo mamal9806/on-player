@@ -2,14 +2,9 @@ name: On Player Android APK Build
 on:
  push:
   branches: [ main, master, fix/on-player-apk-build ]
- pull_request:
-  branches: [ main, master ]
  workflow_dispatch:
 permissions:
  contents: read
-concurrency:
- group: on-player-build-${{ github.head_ref || github.ref_name }}
- cancel-in-progress: true
 jobs:
  build-apk:
   name: Build On Player APK
@@ -50,4 +45,3 @@ jobs:
       if-no-files-found: error
       retention-days: 14
 
-# Re-trigger APK build for latest seek-bar update.
