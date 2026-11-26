@@ -157,11 +157,13 @@ class MainActivity : ComponentActivity() {
     }
     val counts=MediaCategory.values().associateWith { c -> files.count { it.category==c } }
     Column(Modifier.fillMaxSize().padding(bottom=88.dp).padding(horizontal=16.dp)) {
+        AnimatedVisibility(visible=true,enter=fadeIn()+slideInVertically { -it/3 }) {
         Row(Modifier.padding(top=24.dp,bottom=18.dp),verticalAlignment=Alignment.CenterVertically) {
             AppLogo(52.dp); Column(Modifier.weight(1f).padding(start=12.dp)){ Text("On Player",fontSize=24.sp,fontWeight=FontWeight.Bold,color=fg); Text("Your media, neatly organized",fontSize=12.sp,color=muted) }
             IconButton(onClick={nav.navigate("search")}){Icon(Icons.Default.Search,null,tint=fg)}; IconButton(onClick={nav.navigate("settings")}){Icon(Icons.Default.Settings,null,tint=fg)}
         }
-        Card(Modifier.fillMaxWidth().height(148.dp),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=card)) {
+        }
+        Card(Modifier.fillMaxWidth().height(148.dp).border(1.dp,if(light) Color.White.copy(alpha=.9f) else Color.White.copy(alpha=.14f),RoundedCornerShape(24.dp)),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=if(light) Color.White.copy(alpha=.82f) else Color(0xAA1C1A2A))) {
             Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Accent.copy(alpha=.18f),card)))) {
                 Column(Modifier.align(Alignment.CenterStart).padding(20.dp)) { Text("Everything you love",fontSize=22.sp,fontWeight=FontWeight.Bold,color=fg); Text("Browse photos, videos and files",color=muted,modifier=Modifier.padding(top=5.dp)); Button(onClick={nav.navigate("library")},modifier=Modifier.padding(top=10.dp)){Text("Open library")} }
                 Icon(Icons.Default.PlayCircle,null,tint=Accent.copy(alpha=.45f),modifier=Modifier.align(Alignment.CenterEnd).padding(end=18.dp).size(68.dp))
