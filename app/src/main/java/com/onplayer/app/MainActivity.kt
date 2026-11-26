@@ -202,14 +202,42 @@ class MainActivity : ComponentActivity() {
 }
 @Composable private fun FileRow(file:MediaFile,vm:OnPlayerViewModel,nav:NavHostController,favorites:Set<String>,light:Boolean,fg:Color,muted:Color) {
     val context=androidx.compose.ui.platform.LocalContext.current
-    val icon=when(file.category){MediaCategory.Images->Icons.Default.Image;MediaCategory.Videos->Icons.Default.Movie;MediaCategory.Audio->Icons.Default.MusicNote;MediaCategory.Documents->Icons.Default.Description;MediaCategory.Archives->Icons.Default.FolderZip;else->Icons.Default.InsertDriveFile}
-    Row(Modifier.fillMaxWidth().background(if(light) Color.White else Color(0xFF171722),RoundedCornerShape(18.dp)).clickable {
-        if(file.category==MediaCategory.Audio||file.category==MediaCategory.Videos||file.category==MediaCategory.Images){vm.open(file);nav.navigate("player")}
-        else try { val i=Intent(Intent.ACTION_VIEW).apply{setDataAndType(file.uri,file.mime);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)};context.startActivity(Intent.createChooser(i,"Open file")) } catch(_:Exception){}
-    }.padding(10.dp),verticalAlignment=Alignment.CenterVertically) {
-        FilePreview(file,icon); Column(Modifier.weight(1f).padding(start=10.dp)){ Text(file.name,color=fg,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.Medium); Text("${file.sizeText} · ${file.category.label}",color=muted,fontSize=11.sp); Text(SimpleDateFormat("MMM d · HH:mm",Locale.getDefault()).format(Date(file.modified*1000)),color=muted,fontSize=10.sp) }
-        IconButton(onClick={vm.toggleFavorite(file)}){Icon(if(file.uri.toString() in favorites)Icons.Default.Favorite else Icons.Default.FavoriteBorder,null,tint=Accent)}
+    var menuOpen by remember(file.uri) { mutableStateOf(false) }
+    var detailsOpen by remember(file.uri) { mutableStateOf(false) }
+    val icon=when(file.category){MediaCategory.Images->Icons.Default.Image;MediaCategory.Videos->Icons.Default.Movie;MediaCategory.Audio->Icons.Default.MusicNote;MediaCategory.Documents->Icons.Default.Description;MediaCategory.Archives->Icons.Default.FolderZip;MediaCategory.APK->Icons.Default.Android;else->Icons.Default.InsertDriveFile}
+    fun openExternal() {
+        try { val i=Intent(Intent.ACTION_VIEW).apply{setDataAndType(file.uri,file.mime);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)};context.startActivity(Intent.createChooser(i,"Open file")) } catch(_:Exception) { android.widget.Toast.makeText(context,"No app can open this file",android.widget.Toast.LENGTH_SHORT).show() }
     }
+    fun shareFile() {
+        try { val i=Intent(Intent.ACTION_SEND).apply{type=file.mime;putExtra(Intent.EXTRA_STREAM,file.uri);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)};context.startActivity(Intent.createChooser(i,"Share file")) } catch(_:Exception) { }
+    }
+    Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(if(light) listOf(Color.White,Color(0xFFF5F2FF)) else listOf(Color(0xCC272439),Color(0xCC171722))),RoundedCornerShape(18.dp)).border(1.dp,if(light) Color.White else Color.White.copy(alpha=.08f),RoundedCornerShape(18.dp)).clickable {
+        if(file.category==MediaCategory.Audio||file.category==MediaCategory.Videos||file.category==MediaCategory.Images){vm.open(file);nav.navigate("player")} else openExternal()
+    }.padding(10.dp),verticalAlignment=Alignment.CenterVertically) {
+        FilePreview(file,icon)
+        Column(Modifier.weight(1f).padding(start=10.dp)) {
+            Text(file.name,color=fg,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.Medium)
+            Text("${file.sizeText} · ${file.category.label}",color=muted,fontSize=11.sp)
+            Text(SimpleDateFormat("MMM d · HH:mm",Locale.getDefault()).format(Date(file.modified*1000)),color=muted,fontSize=10.sp)
+        }
+        IconButton(onClick={vm.toggleFavorite(file)}){Icon(if(file.uri.toString() in favorites)Icons.Default.Favorite else Icons.Default.FavoriteBorder,null,tint=Accent)}
+        Box {
+            IconButton(onClick={menuOpen=true}) { Icon(Icons.Default.MoreVert,null,tint=muted) }
+            DropdownMenu(expanded=menuOpen,onDismissRequest={menuOpen=false}) {
+                DropdownMenuItem(text={Text("Open with…")},onClick={menuOpen=false;openExternal()},leadingIcon={Icon(Icons.Default.OpenInNew,null)})
+                DropdownMenuItem(text={Text("Share")},onClick={menuOpen=false;shareFile()},leadingIcon={Icon(Icons.Default.Share,null)})
+                DropdownMenuItem(text={Text("File details")},onClick={menuOpen=false;detailsOpen=true},leadingIcon={Icon(Icons.Default.Info,null)})
+            }
+        }
+    }
+    if(detailsOpen) AlertDialog(onDismissRequest={detailsOpen=false},title={Text("File details")},text={Column(verticalArrangement=Arrangement.spacedBy(5.dp)) {
+        Text("Name: ${file.name}")
+        Text("Type: ${file.category.label}")
+        Text("Format: ${file.mime}")
+        Text("Size: ${file.sizeText}")
+        Text("Modified: ${SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.getDefault()).format(Date(file.modified*1000))}")
+        Text("URI: ${file.uri}",maxLines=3)
+    }},confirmButton={TextButton(onClick={detailsOpen=false}){Text("Close")}})
 }
 @Composable private fun LibraryScreen(files:List<MediaFile>,vm:OnPlayerViewModel,nav:NavHostController,favorites:Set<String>,light:Boolean,fg:Color,muted:Color){Column(Modifier.fillMaxSize().padding(bottom=90.dp).padding(16.dp)){Text("Files",fontSize=26.sp,fontWeight=FontWeight.Bold,color=fg);Text("${files.size} files · sorted by newest",color=muted,modifier=Modifier.padding(bottom=12.dp));LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){items(files,key={it.uri.toString()}){FileRow(it,vm,nav,favorites,light,fg,muted)}}}}
 @Composable private fun CategoryScreen(files:List<MediaFile>,cat:MediaCategory,vm:OnPlayerViewModel,nav:NavHostController,favorites:Set<String>,light:Boolean,fg:Color,muted:Color){Column(Modifier.fillMaxSize().padding(bottom=90.dp).padding(16.dp)){Text(cat.label,fontSize=26.sp,fontWeight=FontWeight.Bold,color=fg);Text("${files.size} items",color=muted,modifier=Modifier.padding(bottom=12.dp));LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){items(files,key={it.uri.toString()}){FileRow(it,vm,nav,favorites,light,fg,muted)}}}}
