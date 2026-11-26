@@ -427,9 +427,7 @@ private fun MiniPlayer(file:MediaFile,playing:Boolean,dark:Boolean,controller:Me
         IconButton(onClick=onToggle) { Icon(if(playing)Icons.Default.Pause else Icons.Default.PlayArrow,null,tint=accent) }
       }
       Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(bottom=6.dp)) {
-        Box(Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(99.dp)).background(if(dark)Color.White.copy(alpha=0.15f)else Color.Black.copy(alpha=0.10f)).pointerInput(dur) { androidx.compose.foundation.gestures.detectTapGestures { tap -> if (dur > 0L) controller?.seekTo((tap.x / size.width.coerceAtLeast(1).toFloat() * dur).toLong().coerceIn(0L,dur)) } }.pointerInput(dur) { androidx.compose.foundation.gestures.detectDragGestures { change, _ -> if (dur > 0L) controller?.seekTo((change.position.x / size.width.coerceAtLeast(1).toFloat() * dur).toLong().coerceIn(0L,dur)) } }) {
-          Box(Modifier.fillMaxWidth(if(dur>0L)(pos.toFloat()/dur.toFloat()).coerceIn(0f,1f) else 0f).fillMaxHeight().clip(RoundedCornerShape(99.dp)).background(accent))
-        }
+        Slider(value=if(dur>0L)pos.toFloat().coerceIn(0f,dur.toFloat())else 0f,onValueChange={v->if(dur>0L)controller?.seekTo(v.toLong())},valueRange=0f..(dur.coerceAtLeast(1L).toFloat()),modifier=Modifier.fillMaxWidth().height(18.dp),colors=SliderDefaults.colors(thumbColor=accent,activeTrackColor=accent,inactiveTrackColor=if(dark)Color.White.copy(alpha=0.15f)else Color.Black.copy(alpha=0.10f)))
         Row(Modifier.fillMaxWidth().padding(top=2.dp),horizontalArrangement=Arrangement.SpaceBetween) {
           Text(formatMiniTime(pos),fontSize=9.sp,color=Subtle)
           Text(formatMiniTime(dur),fontSize=9.sp,color=Subtle)
