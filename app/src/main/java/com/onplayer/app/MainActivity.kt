@@ -26,6 +26,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -417,7 +419,7 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
     val files by vm.files.collectAsState()
     val favorites by vm.favorites.collectAsState()
     var confirmClearFavorites by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().padding(horizontal=20.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal=20.dp)) {
         Text("Settings",color=fg,fontSize=30.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=24.dp,bottom=20.dp))
         Text("APPEARANCE",color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp)
         Card(
