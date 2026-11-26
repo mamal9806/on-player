@@ -483,7 +483,7 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
                     Text("Audio focus",color=fg,fontWeight=FontWeight.SemiBold)
                     Text("On Player requests Android audio focus when playback starts.",color=muted,fontSize=12.sp)
                 }
-                Icon(Icons.Default.CheckCircle,color=Color(0xFF69C99B),contentDescription="Enabled")
+                Icon(Icons.Default.CheckCircle,contentDescription="Enabled",tint=Color(0xFF69C99B))
             }
         }
         Text("ABOUT",color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp,modifier=Modifier.padding(top=24.dp))
