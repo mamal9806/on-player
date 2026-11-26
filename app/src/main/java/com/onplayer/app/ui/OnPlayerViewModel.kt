@@ -63,4 +63,5 @@ class OnPlayerViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { getApplication<Application>().onPlayerDataStore.edit { it[THEME_KEY] = value } }
     }
     fun setSearch(value: String) { _search.value = value }
+    fun setScanError(message: String?) { _scanError.value = message }
 }
