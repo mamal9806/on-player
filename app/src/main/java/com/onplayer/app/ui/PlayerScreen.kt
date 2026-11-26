@@ -7,14 +7,13 @@ import android.media.MediaMetadataRetriever
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 import kotlin.math.abs
 import android.view.ViewGroup
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
@@ -124,10 +123,10 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
                 ).build()
             }
             val startIndex = playableQueue.indexOfFirst { it.uri == file.uri }.coerceAtLeast(0)
-            val wasPlaying = controller.playWhenReady
+            // Opening a track from the library must begin playback immediately.
             controller.setMediaItems(queueItems, startIndex, 0L)
             controller.prepare()
-            controller.playWhenReady = wasPlaying
+            controller.play()
         }
 
         requestedPlayNext?.let { next ->
@@ -188,17 +187,12 @@ private fun rememberMediaController(context: android.content.Context): MediaCont
 private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnPlayerViewModel, nav: NavHostController, player: MediaController) {
     val context = LocalContext.current
     val audioMeta = rememberAudioMeta(file)
-    val timerScope = rememberCoroutineScope()
-    var sleepDialog by remember { mutableStateOf(false) }
-    var sleepJob by remember(file.uri) { mutableStateOf<Job?>(null) }
-    DisposableEffect(file.uri) { onDispose { sleepJob?.cancel() } }
     val playable = remember(files, file.category, file.uri) {
         val sameType = files.filter { it.category == file.category && it.isPlayable }
         if (sameType.any { it.uri == file.uri }) sameType else listOf(file) + sameType
     }
     val currentIndex = playable.indexOfFirst { it.uri == file.uri }
     var isPlaying by remember(file.uri) { mutableStateOf(player.isPlaying) }
-    var speed by remember(file.uri) { mutableStateOf(1f) }
     var repeat by remember(file.uri) { mutableStateOf(false) }
     var shuffle by remember(file.uri) { mutableStateOf(false) }
     var volume by remember(file.uri) { mutableFloatStateOf(1f) }
@@ -207,7 +201,6 @@ private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnP
     var aspect by remember(file.uri) { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var rotation by remember(file.uri) { mutableFloatStateOf(0f) }
     var fullscreen by remember(file.uri) { mutableStateOf(false) }
-    var queueOpen by remember(file.uri) { mutableStateOf(false) }
     var playerView by remember { mutableStateOf<PlayerView?>(null) }
     DisposableEffect(player) {
         val listener = object : androidx.media3.common.Player.Listener {
@@ -247,26 +240,73 @@ private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnP
                 Text(if (file.category == MediaCategory.Audio) audioMeta.title else file.displayTitle, color = Color.White, maxLines = 1)
                 Text(if(file.category==MediaCategory.Audio) "Music player" else "Video player", color = Color(0xFFBDB6D6), style = MaterialTheme.typography.labelSmall)
             }
-            IconButton(onClick = { queueOpen = true }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.QueueMusic, null, tint = Color.White) }
-            IconButton(onClick = { sleepDialog = true }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.Timer, null, tint = Color.White) }
             if(file.category!=MediaCategory.Audio) {
                 IconButton(onClick = { fullscreen = true }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.Fullscreen, null, tint = Color.White) }
                 IconButton(onClick = { rotation = (rotation + 90f) % 360f }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.ScreenRotation, null, tint = Color.White) }
             }
         }
         if(file.category==MediaCategory.Audio) {
-            Column(Modifier.fillMaxWidth().weight(1f).background(Brush.verticalGradient(listOf(Color(0xFF29213F),Color(0xFF090910))),RoundedCornerShape(26.dp)).padding(18.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
-                if(audioMeta.artwork!=null) Image(audioMeta.artwork!!.asImageBitmap(),contentDescription="Album cover",modifier=Modifier.size(190.dp).clip(RoundedCornerShape(28.dp)),contentScale=ContentScale.Crop)
-                else Box(Modifier.size(190.dp).background(Brush.linearGradient(listOf(Color(0xFF8B5CF6),Color(0xFF3035B8))),RoundedCornerShape(28.dp)),contentAlignment=Alignment.Center) { Icon(Icons.Default.MusicNote,null,tint=Color.White,modifier=Modifier.size(86.dp)) }
-                Text(audioMeta.title,color=Color.White,style=MaterialTheme.typography.titleLarge,maxLines=1,modifier=Modifier.padding(top=18.dp))
-                Text(audioMeta.artist+(if(audioMeta.album.isNotBlank()) " • "+audioMeta.album else ""),color=Color(0xFFBDB6D6),maxLines=1)
-                Row(Modifier.height(90.dp).padding(top=16.dp),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.Bottom) {
-                    listOf(24, 46, 32, 62, 40, 54, 28, 48, 36, 22).forEach { barHeight ->
-                        Box(
-                            Modifier.width(7.dp).height(barHeight.dp)
-                                .background(Brush.verticalGradient(listOf(Color(0xFFB99AFF),Color(0xFF6041C9))),RoundedCornerShape(6.dp))
+            Box(
+                Modifier.fillMaxWidth().weight(1f)
+                    .clip(RoundedCornerShape(26.dp))
+                    .background(Color(0xFF101018))
+            ) {
+                if (audioMeta.artwork != null) {
+                    Image(
+                        bitmap = audioMeta.artwork!!.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize()
+                            .graphicsLayer { scaleX = 1.22f; scaleY = 1.22f; alpha = 0.72f }
+                            .blur(38.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        Modifier.fillMaxSize().background(
+                            Brush.linearGradient(listOf(Color(0xFF443078), Color(0xFF172747), Color(0xFF11111B)))
                         )
+                    )
+                }
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(
+                            listOf(Color(0xBB090911), Color(0x88202032), Color(0xDD090911))
+                        )
+                    )
+                )
+                Column(
+                    Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    if (audioMeta.artwork != null) {
+                        Image(
+                            bitmap = audioMeta.artwork!!.asImageBitmap(),
+                            contentDescription = "Album cover",
+                            modifier = Modifier.size(204.dp).clip(RoundedCornerShape(22.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            Modifier.size(204.dp)
+                                .background(Brush.linearGradient(listOf(Color(0xFF8B5CF6), Color(0xFF3035B8))), RoundedCornerShape(22.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.MusicNote, null, tint = Color.White, modifier = Modifier.size(76.dp))
+                        }
                     }
+                    Text(
+                        audioMeta.title,
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        modifier = Modifier.padding(top = 20.dp)
+                    )
+                    Text(
+                        audioMeta.artist + if (audioMeta.album.isNotBlank()) " • " + audioMeta.album else "",
+                        color = Color.White.copy(alpha = .78f),
+                        maxLines = 1
+                    )
                 }
             }
         } else AndroidView(factory = { ctx -> PlayerView(ctx).apply { playerView=this; this.player=player; useController=true; resizeMode=aspect } }, update = { it.player=player; it.resizeMode=aspect }, modifier = Modifier.fillMaxWidth().weight(1f).background(Color.Black,RoundedCornerShape(24.dp)).graphicsLayer { rotationZ=rotation })
@@ -275,21 +315,52 @@ private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnP
             Text(file.category.label+" • "+file.sizeText, color=Color(0xFFBDB6D6), style=MaterialTheme.typography.labelSmall)
             Slider(value=if(duration>0) position.coerceIn(0f,duration) else 0f, onValueChange={position=it}, onValueChangeFinished={player.seekTo(position.toLong())}, valueRange=0f..duration.coerceAtLeast(1f), enabled=duration>0)
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(formatPlayerTime(position.toLong()),color=Color(0xFFBDB6D6),fontSize=11.sp);Text(formatPlayerTime(duration.toLong()),color=Color(0xFFBDB6D6),fontSize=11.sp)}
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
-                IconButton(onClick={shuffle=!shuffle;player.shuffleModeEnabled=shuffle}) { Icon(Icons.Default.Shuffle,null,tint=if(shuffle) Color(0xFFC5A6FF) else Color.Gray) }
-                IconButton(onClick={player.seekToPreviousMediaItem()},enabled=player.isCommandAvailable(androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)) { Icon(Icons.Default.SkipPrevious,null,tint=if(currentIndex>0) Color.White else Color.Gray,modifier=Modifier.size(32.dp)) }
-                IconButton(onClick={if(isPlaying)player.pause() else player.play();isPlaying=!isPlaying},modifier=Modifier.size(64.dp).background(Color(0x552B2355),RoundedCornerShape(50)).border(1.5.dp,Color(0x66C5A6FF),RoundedCornerShape(50))) { Icon(if(isPlaying)Icons.Default.PauseCircleFilled else Icons.Default.PlayCircleFilled,null,tint=Color(0xFFC5A6FF),modifier=Modifier.size(56.dp)) }
-                IconButton(onClick={player.seekToNextMediaItem()},enabled=player.isCommandAvailable(androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)) { Icon(Icons.Default.SkipNext,null,tint=if(currentIndex>=0&&currentIndex<playable.lastIndex) Color.White else Color.Gray,modifier=Modifier.size(32.dp)) }
-                IconButton(onClick={repeat=!repeat;player.repeatMode=if(repeat)ExoPlayer.REPEAT_MODE_ONE else ExoPlayer.REPEAT_MODE_OFF}) { Icon(Icons.Default.Repeat,null,tint=if(repeat) Color(0xFFC5A6FF) else Color.Gray) }
-            }
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                Icon(Icons.Default.VolumeDown,null,tint=Color(0xFFBDB6D6))
-                Slider(value=volume,onValueChange={volume=it;player.volume=it},modifier=Modifier.weight(1f))
-                Icon(Icons.Default.VolumeUp,null,tint=Color(0xFFBDB6D6))
-            }
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
-                Text("Speed",color=Color(0xFFBDB6D6),fontSize=12.sp)
-                Row { listOf(.75f,1f,1.25f,1.5f,2f).forEach { v -> Text("${v}x",color=if(speed==v)Color(0xFFC5A6FF)else Color.Gray,modifier=Modifier.padding(horizontal=4.dp).clickable{speed=v;player.setPlaybackSpeed(v)},fontSize=12.sp) } }
+            if (file.category == MediaCategory.Audio) {
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { player.seekToPreviousMediaItem() },
+                        enabled = player.isCommandAvailable(androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM),
+                        modifier = Modifier.size(58.dp)
+                    ) {
+                        Icon(Icons.Default.SkipPrevious, "Previous track", tint = Color.White, modifier = Modifier.size(34.dp))
+                    }
+                    IconButton(
+                        onClick = { if (player.isPlaying) player.pause() else player.play() },
+                        modifier = Modifier.padding(horizontal = 24.dp).size(78.dp)
+                            .background(Color.White, RoundedCornerShape(50))
+                    ) {
+                        Icon(
+                            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            if (isPlaying) "Pause" else "Play",
+                            tint = Color(0xFF17131F),
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = { player.seekToNextMediaItem() },
+                        enabled = player.isCommandAvailable(androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM),
+                        modifier = Modifier.size(58.dp)
+                    ) {
+                        Icon(Icons.Default.SkipNext, "Next track", tint = Color.White, modifier = Modifier.size(34.dp))
+                    }
+                }
+            } else {
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
+                    IconButton(onClick={shuffle=!shuffle;player.shuffleModeEnabled=shuffle}) { Icon(Icons.Default.Shuffle,null,tint=if(shuffle) Color(0xFFC5A6FF) else Color.Gray) }
+                    IconButton(onClick={player.seekToPreviousMediaItem()},enabled=player.isCommandAvailable(androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)) { Icon(Icons.Default.SkipPrevious,null,tint=if(currentIndex>0) Color.White else Color.Gray,modifier=Modifier.size(32.dp)) }
+                    IconButton(onClick={if(isPlaying)player.pause() else player.play()},modifier=Modifier.size(64.dp).background(Color(0x552B2355),RoundedCornerShape(50)).border(1.5.dp,Color(0x66C5A6FF),RoundedCornerShape(50))) { Icon(if(isPlaying)Icons.Default.Pause else Icons.Default.PlayArrow,null,tint=Color(0xFFC5A6FF),modifier=Modifier.size(48.dp)) }
+                    IconButton(onClick={player.seekToNextMediaItem()},enabled=player.isCommandAvailable(androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)) { Icon(Icons.Default.SkipNext,null,tint=if(currentIndex>=0&&currentIndex<playable.lastIndex) Color.White else Color.Gray,modifier=Modifier.size(32.dp)) }
+                    IconButton(onClick={repeat=!repeat;player.repeatMode=if(repeat)ExoPlayer.REPEAT_MODE_ONE else ExoPlayer.REPEAT_MODE_OFF}) { Icon(Icons.Default.Repeat,null,tint=if(repeat) Color(0xFFC5A6FF) else Color.Gray) }
+                }
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                    Icon(Icons.Default.VolumeDown,null,tint=Color(0xFFBDB6D6))
+                    Slider(value=volume,onValueChange={volume=it;player.volume=it},modifier=Modifier.weight(1f))
+                    Icon(Icons.Default.VolumeUp,null,tint=Color(0xFFBDB6D6))
+                }
             }
             if(file.category!=MediaCategory.Audio) {
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
@@ -307,11 +378,7 @@ private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnP
             }
         }
     }
-    if(sleepDialog) AlertDialog(onDismissRequest={sleepDialog=false},title={Text("Sleep timer")},text={Column {
-        listOf(15,30,45,60,90).forEach { minutes -> TextButton(onClick={sleepJob?.cancel();sleepJob=timerScope.launch{delay(minutes*60_000L);player.pause();isPlaying=false};sleepDialog=false},modifier=Modifier.fillMaxWidth()) { Text("Pause playback in ${minutes} minutes") } }
-        TextButton(onClick={sleepJob?.cancel();sleepJob=null;sleepDialog=false},modifier=Modifier.fillMaxWidth()) { Text("Cancel timer") }
-    }},confirmButton={TextButton(onClick={sleepDialog=false}){Text("Close")}})
-    if(queueOpen) AlertDialog(onDismissRequest={queueOpen=false},title={Text("Play queue")},text={Column(Modifier.heightIn(max=420.dp)){playable.forEachIndexed { index, item -> Text(item.displayTitle,maxLines=1,modifier=Modifier.fillMaxWidth().clickable{playAt(index);queueOpen=false}.padding(vertical=10.dp),color=if(item.uri==file.uri)Color(0xFF9B4DFF)else MaterialTheme.colorScheme.onSurface) } }},confirmButton={TextButton(onClick={queueOpen=false}){Text("Close")}})
+
     if(fullscreen) Dialog(onDismissRequest={fullscreen=false},properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             AndroidView(factory={ctx->PlayerView(ctx).apply{this.player=player;useController=true;resizeMode=aspect}},modifier=Modifier.fillMaxSize())
