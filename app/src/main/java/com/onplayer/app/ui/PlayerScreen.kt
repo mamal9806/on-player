@@ -7,6 +7,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -170,6 +171,10 @@ fun PlayerScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var renameText by remember(file.uri) { mutableStateOf(file.displayTitle) }
     var newPlaylistName by remember { mutableStateOf("") }
+    var screenEntered by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { screenEntered = true }
+    val screenAlpha by animateFloatAsState(if (screenEntered) 1f else 0f, animationSpec = tween(650), label = "player entrance alpha")
+    val screenScale by animateFloatAsState(if (screenEntered) 1f else 0.965f, animationSpec = tween(700), label = "player entrance scale")
     val discRotation = rememberInfiniteTransition(label = "disc rotation")
         .animateFloat(
             initialValue = 0f,
@@ -367,6 +372,7 @@ fun PlayerScreen(
 
         Column(
             Modifier.fillMaxSize()
+                .graphicsLayer { alpha = screenAlpha; scaleX = screenScale; scaleY = screenScale }
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .padding(horizontal = 22.dp, vertical = 8.dp),
@@ -438,6 +444,9 @@ fun PlayerScreen(
                     },
                 contentAlignment = Alignment.Center
             ) {
+                val discAura = rememberInfiniteTransition(label = "disc aura")
+                    .animateFloat(0.12f, 0.26f, infiniteRepeatable(tween(2100), RepeatMode.Reverse), label = "aura opacity").value
+                Box(Modifier.fillMaxSize(0.76f).background(Brush.radialGradient(listOf(dynamicAccent.copy(alpha = discAura), dynamicAccent.copy(alpha = 0f), Color.Transparent))), contentAlignment = Alignment.Center) {}
                 Box(
                     Modifier.fillMaxHeight(0.88f).aspectRatio(1f)
                         .graphicsLayer { rotationZ = if (playing) discRotation else 0f }
