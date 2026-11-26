@@ -153,16 +153,16 @@ private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnP
     }
     Column(Modifier.fillMaxSize().padding(bottom = 90.dp).padding(horizontal = 12.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 6.dp).background(Brush.horizontalGradient(listOf(Color(0xAA312A50),Color(0xAA171722))),RoundedCornerShape(22.dp)), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
+            IconButton(onClick = { nav.popBackStack() }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
             Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
                 Text(file.name, color = Color.White, maxLines = 1)
                 Text(if(file.category==MediaCategory.Audio) "Music player" else "Video player", color = Color(0xFFBDB6D6), style = MaterialTheme.typography.labelSmall)
             }
-            IconButton(onClick = { queueOpen = true }) { Icon(Icons.Default.QueueMusic, null, tint = Color.White) }
-            IconButton(onClick = { sleepDialog = true }) { Icon(Icons.Default.Timer, null, tint = Color.White) }
+            IconButton(onClick = { queueOpen = true }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.QueueMusic, null, tint = Color.White) }
+            IconButton(onClick = { sleepDialog = true }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.Timer, null, tint = Color.White) }
             if(file.category!=MediaCategory.Audio) {
-                IconButton(onClick = { fullscreen = true }) { Icon(Icons.Default.Fullscreen, null, tint = Color.White) }
-                IconButton(onClick = { rotation = (rotation + 90f) % 360f }) { Icon(Icons.Default.ScreenRotation, null, tint = Color.White) }
+                IconButton(onClick = { fullscreen = true }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.Fullscreen, null, tint = Color.White) }
+                IconButton(onClick = { rotation = (rotation + 90f) % 360f }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.ScreenRotation, null, tint = Color.White) }
             }
         }
         if(file.category==MediaCategory.Audio) {
@@ -267,13 +267,13 @@ private fun formatPlayerTime(ms: Long): String {
     }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xCC332B50),Color(0xAA181824))), RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp)).border(1.dp,Color.White.copy(alpha=.12f),RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp)), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
+            IconButton(onClick = { nav.popBackStack() }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
             Column(Modifier.weight(1f)) {
                 Text(current.name, color = Color.White, maxLines = 1)
                 Text("${index + 1} / ${imageFiles.size} • ${resolution} • ${current.sizeText}", color = Color(0xFFBDB6D6), style = MaterialTheme.typography.labelSmall)
             }
-            IconButton(onClick = { scale = 1f; rotation = 0f; panX = 0f; panY = 0f }) { Icon(Icons.Default.FitScreen, null, tint = Color.White) }
-            IconButton(onClick = { rotation += 90f }) { Icon(Icons.Default.RotateRight, null, tint = Color.White) }
+            IconButton(onClick = { scale = 1f; rotation = 0f; panX = 0f; panY = 0f }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.FitScreen, null, tint = Color.White) }
+            IconButton(onClick = { rotation += 90f }, modifier=Modifier.size(44.dp).background(Color(0x22FFFFFF),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(50))) { Icon(Icons.Default.RotateRight, null, tint = Color.White) }
             IconButton(onClick = {
                 try { val share = Intent(Intent.ACTION_SEND).apply { type = current.mime; putExtra(Intent.EXTRA_STREAM, current.uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }; context.startActivity(Intent.createChooser(share, "Share image")) } catch (_: Exception) { }
             }) { Icon(Icons.Default.Share, null, tint = Color.White) }
