@@ -14,6 +14,7 @@ jobs:
  build-apk:
   name: Build On Player APK
   runs-on: ubuntu-latest
+  timeout-minutes: 18
   steps:
    - name: Checkout repository
      uses: actions/checkout@v4
