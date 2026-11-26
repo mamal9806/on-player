@@ -448,9 +448,27 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
     val files by vm.files.collectAsState()
     val favorites by vm.favorites.collectAsState()
     var confirmClearFavorites by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val prefs = remember(context) { context.getSharedPreferences("on_player_settings", android.content.Context.MODE_PRIVATE) }
+    var appLanguage by remember { mutableStateOf(prefs.getString("app_language", "English") ?: "English") }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal=20.dp)) {
         Text("Settings",color=fg,fontSize=30.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=24.dp,bottom=20.dp))
-        Text("APPEARANCE",color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp)
+        Text("LANGUAGE",color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp)
+        Card(Modifier.fillMaxWidth().padding(top=10.dp),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=if(dark) CardDark else Color.White)) {
+            Column(Modifier.padding(16.dp)) {
+                listOf("English","فارسی").forEach { language ->
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable {
+                        appLanguage = language
+                        prefs.edit().putString("app_language", language).apply()
+                    }.padding(vertical=13.dp,horizontal=4.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Icon(Icons.Default.Language,null,tint=Purple)
+                        Text(language, color=fg, modifier=Modifier.weight(1f).padding(start=12.dp))
+                        if(appLanguage==language) Icon(Icons.Default.CheckCircle,null,tint=Purple)
+                    }
+                }
+            }
+        }
+        Text("APPEARANCE",color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp,modifier=Modifier.padding(top=22.dp))
         Card(
             Modifier.fillMaxWidth().padding(top=10.dp),
             shape=RoundedCornerShape(24.dp),
@@ -530,7 +548,48 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
                         Text("Version 1.0 • Music, beautifully simple",color=muted,fontSize=12.sp)
                     }
                 }
-                Text("An audio-only player with persistent playlists, favorites and background playback.",color=muted,fontSize=13.sp,modifier=Modifier.padding(top=14.dp))
+                Text(
+                    if(appLanguage=="فارسی")
+                        "یک موزیک‌پلیر سبک با طراحی بنفش، دیسک متحرک، رنگ‌های هماهنگ با کاور، بلور پس‌زمینه و کنترل‌های روان."
+                    else
+                        "A lightweight music player with artwork-reactive colors, blurred album wallpaper, a symmetric rotating CD, and smooth playback controls.",
+                    color=muted,fontSize=13.sp,modifier=Modifier.padding(top=14.dp)
+                )
+                Text(if(appLanguage=="فارسی") "ویژگی‌ها" else "FEATURES",color=Purple,fontWeight=FontWeight.Bold,fontSize=11.sp,letterSpacing=1.2.sp,modifier=Modifier.padding(top=16.dp,bottom=8.dp))
+                val features = if(appLanguage=="فارسی") listOf(
+                    "پخش موسیقی از حافظه دستگاه",
+                    "ساخت و مدیریت پلی‌لیست",
+                    "علاقه‌مندی‌ها و ذخیره آهنگ‌ها",
+                    "پخش در پس‌زمینه و کنترل از اعلان‌ها",
+                    "دیسک CD گرد و متقارن با چرخش هنگام پخش",
+                    "پس‌زمینه بلور شده از کاور آهنگ",
+                    "رنگ پویا هماهنگ با کاور",
+                    "جستجو، تغییر نام و حذف آهنگ",
+                    "پخش تصادفی و تکرار آهنگ",
+                    "جابجایی بین آهنگ‌ها با کشیدن صفحه",
+                    "پوسته روشن، تاریک و AMOLED",
+                    "انتخاب زبان فارسی یا انگلیسی"
+                ) else listOf(
+                    "Local music library playback",
+                    "Create and manage playlists",
+                    "Favorites and saved tracks",
+                    "Background playback and notification controls",
+                    "Symmetric rotating CD while playing",
+                    "Blurred album-art wallpaper",
+                    "Artwork-reactive accent colors",
+                    "Search, rename and delete tracks",
+                    "Shuffle and repeat controls",
+                    "Swipe to switch tracks",
+                    "Light, Dark and AMOLED themes",
+                    "Persian and English language option"
+                )
+                features.forEach { feature ->
+                    Row(Modifier.padding(vertical=4.dp),verticalAlignment=Alignment.Top) {
+                        Icon(Icons.Default.CheckCircle,null,tint=Purple,modifier=Modifier.size(16.dp))
+                        Text(feature,color=fg,fontSize=12.sp,modifier=Modifier.padding(start=8.dp))
+                    }
+                }
+                Text(if(appLanguage=="فارسی") "ساخته شده برای گوش دادن ساده، زیبا و بدون حواس‌پرتی." else "Made for focused listening: simple, beautiful, and distraction-free.",color=muted,fontSize=12.sp,modifier=Modifier.padding(top=12.dp))
             }
         }
     }
