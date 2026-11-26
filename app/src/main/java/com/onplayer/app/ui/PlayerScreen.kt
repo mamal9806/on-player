@@ -600,6 +600,7 @@ fun PlayerScreen(
     }
 }
 
+}
 @Composable
 private fun GlassIconButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
