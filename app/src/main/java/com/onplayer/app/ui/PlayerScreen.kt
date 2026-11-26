@@ -134,7 +134,7 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
         if(file.category==MediaCategory.Audio) {
             Column(Modifier.fillMaxWidth().weight(1f).background(Brush.verticalGradient(listOf(Color(0xFF29213F),Color(0xFF090910))),RoundedCornerShape(26.dp)).padding(18.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
                 if(audioMeta.artwork!=null) Image(audioMeta.artwork!!.asImageBitmap(),contentDescription="Album cover",modifier=Modifier.size(190.dp).clip(RoundedCornerShape(28.dp)),contentScale=ContentScale.Crop)
-                else Box(Modifier.size(190.dp).background(Brush.linearGradient(listOf(Color(0xFF8B5CF6),Color(0xFF3035B8))),RoundedCornerShape(28.dp)),contentAlignment=Alignment.Center){Icon(Icons.Default.MusicNote,null,tint=Color.White,modifier=Modifier.size(86.dp))}
+                else Box(Modifier.size(190.dp).background(Brush.linearGradient(listOf(Color(0xFF8B5CF6),Color(0xFF3035B8))),RoundedCornerShape(28.dp)),contentAlignment=Alignment.Center) { Icon(Icons.Default.MusicNote,null,tint=Color.White,modifier=Modifier.size(86.dp)) }
                 Text(audioMeta.title,color=Color.White,style=MaterialTheme.typography.titleLarge,maxLines=1,modifier=Modifier.padding(top=18.dp))
                 Text(audioMeta.artist+(if(audioMeta.album.isNotBlank()) " • "+audioMeta.album else ""),color=Color(0xFFBDB6D6),maxLines=1)
                 Row(Modifier.height(90.dp).padding(top=16.dp),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.Bottom) {
