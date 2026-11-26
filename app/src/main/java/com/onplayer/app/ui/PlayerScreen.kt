@@ -73,7 +73,14 @@ private fun rememberTrackArtwork(file: MediaFile): TrackArtwork {
                 val album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)
                     ?.takeIf { it.isNotBlank() && it != "<unknown>" } ?: file.displayAlbum
                 val bitmap = retriever.embeddedPicture?.let { bytes ->
-                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    // Decode album art to a bounded size to avoid large allocations on UI transitions.
+                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                    val sample = maxOf(1, maxOf(bounds.outWidth, bounds.outHeight) / 640)
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply {
+                        inSampleSize = sample
+                        inPreferredConfig = Bitmap.Config.RGB_565
+                    })
                 }
                 TrackArtwork(bitmap, title, artist, album)
             } catch (_: Exception) {
@@ -189,7 +196,7 @@ fun PlayerScreen(
         while (playing) {
             position = player.currentPosition.coerceAtLeast(0L)
             duration = player.duration.takeIf { it > 0L } ?: 0L
-            delay(350)
+            delay(600)
         }
         position = player.currentPosition.coerceAtLeast(0L)
         duration = player.duration.takeIf { it > 0L } ?: 0L
