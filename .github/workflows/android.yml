@@ -7,6 +7,9 @@ on:
  workflow_dispatch:
 permissions:
  contents: read
+concurrency:
+ group: on-player-build-${{ github.ref }}
+ cancel-in-progress: true
 jobs:
  build-apk:
   name: Build On Player APK
