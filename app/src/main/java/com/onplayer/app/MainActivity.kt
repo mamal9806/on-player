@@ -226,7 +226,19 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                 bottomBar={
                     Column {
                         if (current != null) MiniPlayer(current!!, playing, dark, onClick={playerOpen=true}, onToggle={ if (controller?.isPlaying==true) controller.pause() else controller?.play() })
-                        NavigationBar(containerColor=if(dark) Color(0xFF11121B) else Color.White, tonalElevation=0.dp) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal=12.dp, vertical=7.dp)
+                                .clip(RoundedCornerShape(28.dp))
+                                .background(if(dark) Color(0xE51A1A27) else Color(0xF2FFFFFF))
+                                .border(
+                                    1.dp,
+                                    Brush.linearGradient(listOf(Color.White.copy(alpha=if(dark)0.30f else 0.85f),Color.White.copy(alpha=0.05f))),
+                                    RoundedCornerShape(28.dp)
+                                )
+                                .padding(horizontal=3.dp, vertical=6.dp),
+                            horizontalArrangement=Arrangement.spacedBy(2.dp),
+                            verticalAlignment=Alignment.CenterVertically
+                        ) {
                             Tab.entries.forEach { item ->
                                 val icon = when(item) {
                                     Tab.Home -> Icons.Default.Home
@@ -236,7 +248,17 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                                     Tab.Search -> Icons.Default.Search
                                     Tab.Settings -> Icons.Default.Settings
                                 }
-                                NavigationBarItem(selected=tab==item, onClick={tab=item}, icon={Icon(icon,null)}, label={Text(item.title)})
+                                val selected = tab == item
+                                Column(
+                                    Modifier.weight(1f).clip(RoundedCornerShape(22.dp))
+                                        .background(if(selected) Purple.copy(alpha=if(dark)0.22f else 0.12f) else Color.Transparent)
+                                        .clickable { tab = item }
+                                        .padding(vertical=6.dp),
+                                    horizontalAlignment=Alignment.CenterHorizontally
+                                ) {
+                                    Icon(icon,null,tint=if(selected) Purple else muted,modifier=Modifier.size(19.dp))
+                                    Text(item.title,color=if(selected) Purple else muted,fontSize=8.sp,maxLines=1)
+                                }
                             }
                         }
                     }
@@ -411,12 +433,7 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
                         verticalAlignment=Alignment.CenterVertically
                     ) {
                         Icon(
-                            when(mode) {
-                                "Light" -> Icons.Default.LightMode
-                                "System" -> Icons.Default.SettingsBrightness
-                                "AMOLED Black" -> Icons.Default.Contrast
-                                else -> Icons.Default.DarkMode
-                            },
+                            Icons.Default.Palette,
                             contentDescription=null,tint=Purple
                         )
                         Text(mode,color=fg,modifier=Modifier.weight(1f).padding(start=12.dp))
