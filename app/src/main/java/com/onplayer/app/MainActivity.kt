@@ -221,7 +221,7 @@ private fun FeaturedTrack(file:MediaFile,playing:Boolean,dark:Boolean,onOpen:(Me
     val shimmer=rememberInfiniteTransition(label="playing pulse").animateFloat(initial=0.94f,targetValue=1f,animationSpec=infiniteRepeatable(tween(1100),RepeatMode.Reverse),label="scale").value
     Box(Modifier.fillMaxWidth().height(300.dp).clip(RoundedCornerShape(30.dp)).background(Brush.linearGradient(listOf(Color(0xFF2E244A),Color(0xFF141521),Color(0xFF11121A)))).clickable{onOpen(file)}) {
         artwork?.let{Image(it.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)}
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xE9090A12)),Color(0xFF090A12)))))
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xE9090A12),Color(0xFF090A12))))) {}
         Column(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.Bottom) {
             Text(if(playing)"NOW PLAYING" else "LAST PLAYED",color=Purple,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=2.sp)
             Text(file.displayTitle,color=Color.White,fontSize=23.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
