@@ -53,6 +53,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import com.onplayer.app.data.MediaFile
+import com.onplayer.app.ui.UserPlaylist
 
 private data class TrackArtwork(val bitmap: Bitmap?, val title: String, val artist: String, val album: String)
 
@@ -91,7 +92,11 @@ fun PlayerScreen(
     files: List<MediaFile>,
     vm: OnPlayerViewModel,
     player: MediaController?,
-    onBack: () -> Unit
+    playlists: List<UserPlaylist>,
+    onBack: () -> Unit,
+    onAddToPlaylist: (String, MediaFile) -> Unit,
+    onRenameTrack: (MediaFile, String) -> Unit,
+    onDeleteTrack: (MediaFile) -> Unit
 ) {
     val foreground = Color.White
     val secondary = Color(0xFFD1C9E4)
@@ -130,6 +135,13 @@ fun PlayerScreen(
     var duration by remember { mutableLongStateOf(0L) }
     var shuffle by remember { mutableStateOf(player.shuffleModeEnabled) }
     var repeatOne by remember { mutableStateOf(player.repeatMode == Player.REPEAT_MODE_ONE) }
+    var moreExpanded by remember { mutableStateOf(false) }
+    var showPlaylistPicker by remember { mutableStateOf(false) }
+    var showCreatePlaylist by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var renameText by remember(file.uri) { mutableStateOf(file.displayTitle) }
+    var newPlaylistName by remember { mutableStateOf("") }
     val pulse = rememberInfiniteTransition(label = "album glass pulse")
         .animateFloat(
             initialValue = 1f,
@@ -181,6 +193,133 @@ fun PlayerScreen(
         }
         position = player.currentPosition.coerceAtLeast(0L)
         duration = player.duration.takeIf { it > 0L } ?: 0L
+    }
+
+    if (showPlaylistPicker) {
+        AlertDialog(
+            onDismissRequest = { showPlaylistPicker = false },
+            title = { Text("Add to playlist") },
+            text = {
+                if (playlists.isEmpty()) {
+                    Text("You have no playlists yet. Create one to save this song.")
+                } else {
+                    Column(Modifier.heightIn(max = 360.dp)) {
+                        playlists.forEach { playlist ->
+                            val alreadyAdded = file.uri.toString() in playlist.songUris
+                            Row(
+                                Modifier.fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable {
+                                        if (!alreadyAdded) onAddToPlaylist(playlist.id, file)
+                                        showPlaylistPicker = false
+                                    }
+                                    .padding(horizontal = 10.dp, vertical = 13.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.QueueMusic, null, tint = Color(0xFFD6B8FF))
+                                Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                                    Text(playlist.name, color = Color.White, fontWeight = FontWeight.SemiBold)
+                                    Text(playlist.songUris.size.toString() + " songs", color = Color(0xFFD1C9E4), fontSize = 11.sp)
+                                }
+                                Icon(
+                                    if (alreadyAdded) Icons.Default.CheckCircle else Icons.Default.AddCircleOutline,
+                                    contentDescription = null,
+                                    tint = if (alreadyAdded) Color(0xFF69C99B) else Color(0xFFD6B8FF)
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPlaylistPicker = false }) { Text("Done") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showPlaylistPicker = false
+                    newPlaylistName = ""
+                    showCreatePlaylist = true
+                }) { Text("New playlist") }
+            },
+            containerColor = Color(0xFF242033),
+            titleContentColor = Color.White,
+            textContentColor = Color(0xFFD1C9E4)
+        )
+    }
+
+    if (showCreatePlaylist) {
+        AlertDialog(
+            onDismissRequest = { showCreatePlaylist = false },
+            title = { Text("Create playlist") },
+            text = {
+                OutlinedTextField(
+                    value = newPlaylistName,
+                    onValueChange = { newPlaylistName = it },
+                    singleLine = true,
+                    label = { Text("Playlist name") }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val id = vm.createPlaylist(newPlaylistName)
+                    if (id != null) onAddToPlaylist(id, file)
+                    showCreatePlaylist = false
+                }) { Text("Create") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreatePlaylist = false }) { Text("Cancel") }
+            },
+            containerColor = Color(0xFF242033),
+            titleContentColor = Color.White,
+            textContentColor = Color(0xFFD1C9E4)
+        )
+    }
+
+    if (showRenameDialog) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text("Rename in On Player") },
+            text = {
+                OutlinedTextField(
+                    value = renameText,
+                    onValueChange = { renameText = it },
+                    singleLine = true,
+                    label = { Text("Song name") }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onRenameTrack(file, renameText)
+                    showRenameDialog = false
+                }) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameDialog = false }) { Text("Cancel") }
+            },
+            containerColor = Color(0xFF242033),
+            titleContentColor = Color.White,
+            textContentColor = Color(0xFFD1C9E4)
+        )
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete this song?") },
+            text = { Text("The audio file will be deleted from your device. Android may ask you to confirm this action.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    onDeleteTrack(file)
+                }) { Text("Delete", color = Color(0xFFFF8796)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+            },
+            containerColor = Color(0xFF242033),
+            titleContentColor = Color.White,
+            textContentColor = Color(0xFFD1C9E4)
+        )
     }
 
     Box(Modifier.fillMaxSize().background(Color(0xFF080912))) {
@@ -252,12 +391,36 @@ fun PlayerScreen(
                     Text("ON PLAYER", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.4.sp)
                     Text("Now Playing", color = secondary, fontSize = 12.sp)
                 }
-                GlassIconButton(
-                    icon = Icons.Default.MoreHoriz,
-                    description = "More options",
-                    onClick = {},
-                    diameter = 46.dp
-                )
+                Box {
+                    GlassIconButton(
+                        icon = Icons.Default.MoreHoriz,
+                        description = "More options",
+                        onClick = { moreExpanded = true },
+                        diameter = 46.dp
+                    )
+                    DropdownMenu(
+                        expanded = moreExpanded,
+                        onDismissRequest = { moreExpanded = false },
+                        shape = RoundedCornerShape(20.dp),
+                        containerColor = Color(0xFF242033)
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Add to playlist", color = Color.White) },
+                            leadingIcon = { Icon(Icons.Default.PlaylistAdd, null, tint = Color(0xFFD6B8FF)) },
+                            onClick = { moreExpanded = false; showPlaylistPicker = true }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Rename song", color = Color.White) },
+                            leadingIcon = { Icon(Icons.Default.Edit, null, tint = Color(0xFFD6B8FF)) },
+                            onClick = { moreExpanded = false; renameText = file.displayTitle; showRenameDialog = true }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete from device", color = Color(0xFFFFA0AA)) },
+                            leadingIcon = { Icon(Icons.Default.DeleteOutline, null, tint = Color(0xFFFF8796)) },
+                            onClick = { moreExpanded = false; showDeleteDialog = true }
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.weight(0.14f))
@@ -318,7 +481,7 @@ fun PlayerScreen(
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        artwork.title,
+                        file.displayTitle,
                         color = foreground,
                         fontSize = 25.sp,
                         fontWeight = FontWeight.Bold,
