@@ -136,7 +136,10 @@ class OnPlayerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun scan() = viewModelScope.launch(Dispatchers.IO) {
+    fun scan() {
+        // Avoid overlapping MediaStore scans from permission callbacks, refresh taps, and broadcasts.
+        if (_scanning.value) return
+        viewModelScope.launch(Dispatchers.IO) {
         _scanning.value = true
         _scanError.value = null
         try {
@@ -151,6 +154,7 @@ class OnPlayerViewModel(app: Application) : AndroidViewModel(app) {
             _scanError.value = e.message ?: "Could not scan storage."
         } finally {
             _scanning.value = false
+        }
         }
     }
 
