@@ -166,9 +166,12 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
                 Text("Speed",color=Color(0xFFBDB6D6),fontSize=12.sp)
                 Row { listOf(.75f,1f,1.25f,1.5f,2f).forEach { v -> Text("${v}x",color=if(speed==v)Color(0xFFC5A6FF)else Color.Gray,modifier=Modifier.padding(horizontal=4.dp).clickable{speed=v;player.setPlaybackSpeed(v)},fontSize=12.sp) } }
             }
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
-                Text("Aspect ratio",color=Color(0xFFBDB6D6),fontSize=12.sp)
-                Row { listOf("Fit" to AspectRatioFrameLayout.RESIZE_MODE_FIT,"Fill" to AspectRatioFrameLayout.RESIZE_MODE_FILL,"Zoom" to AspectRatioFrameLayout.RESIZE_MODE_ZOOM).forEach { (label,mode) -> Text(label,color=if(aspect==mode)Color(0xFFC5A6FF)else Color.Gray,modifier=Modifier.padding(horizontal=5.dp).clickable{aspect=mode;playerView?.resizeMode=mode},fontSize=12.sp) } }
+            if(file.category!=MediaCategory.Audio) {
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
+                    Text("Aspect ratio",color=Color(0xFFBDB6D6),fontSize=12.sp)
+                    Row { listOf("Fit" to AspectRatioFrameLayout.RESIZE_MODE_FIT,"Fill" to AspectRatioFrameLayout.RESIZE_MODE_FILL,"Zoom" to AspectRatioFrameLayout.RESIZE_MODE_ZOOM).forEach { (label,mode) -> Text(label,color=if(aspect==mode)Color(0xFFC5A6FF)else Color.Gray,modifier=Modifier.padding(horizontal=5.dp).clickable{aspect=mode;playerView?.resizeMode=mode},fontSize=12.sp) } }
+                }
+    
             }
             if (file.category == MediaCategory.Videos) {
                 Button(onClick = {
