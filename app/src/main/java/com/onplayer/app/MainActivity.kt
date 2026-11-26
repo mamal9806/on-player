@@ -67,7 +67,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-private val Purple = Color(0xFFFF536A)
+private val Purple = Color(0xFF8B5CF6)
 private val Deep = Color(0xFF090A12)
 private val CardDark = Color(0xFF151723)
 private val Subtle = Color(0xFF9B9BAF)
@@ -122,7 +122,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
     val isAmoled = themeMode == "AMOLED Black"
     val isAccentTheme = false
-    val accent = Color(0xFFFF536A)
+    val accent = Color(0xFF8B5CF6)
     val dark = isAccentTheme || isAmoled || (themeMode != "Light" && (themeMode != "System" || systemDark))
     val background = when { isAmoled -> Color.Black; dark -> Deep; else -> Color(0xFFF5F4FA) }
     val foreground = if (dark) Color.White else Color(0xFF22232E)
@@ -349,7 +349,7 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
 @Composable
 private fun FeaturedTrack(file:MediaFile,playing:Boolean,dark:Boolean,onOpen:(MediaFile)->Unit) {
     val artwork by rememberArtwork(file.uri)
-    val shimmer=rememberInfiniteTransition(label="playing pulse").animateFloat(initialValue=0.94f,targetValue=1f,animationSpec=infiniteRepeatable(tween(1100),RepeatMode.Reverse),label="scale").value
+    val discRotation=rememberInfiniteTransition(label="featured disc").animateFloat(initialValue=0f,targetValue=360f,animationSpec=infiniteRepeatable(tween(12000,easing=androidx.compose.animation.core.LinearEasing)),label="rotation").value
     Box(Modifier.fillMaxWidth().height(300.dp).clip(RoundedCornerShape(30.dp)).background(Brush.linearGradient(listOf(Color(0xFF2E244A),Color(0xFF141521),Color(0xFF11121A)))).clickable{onOpen(file)}) {
         artwork?.let{Image(it.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)}
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xE9090A12),Color(0xFF090A12))))) {}
@@ -357,7 +357,10 @@ private fun FeaturedTrack(file:MediaFile,playing:Boolean,dark:Boolean,onOpen:(Me
             Text(if(playing)"NOW PLAYING" else "LAST PLAYED",color=Purple,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=2.sp)
             Text(file.displayTitle,color=Color.White,fontSize=23.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
             Text(file.displayArtist,color=Color.White.copy(alpha=.75f),maxLines=1)
-            Box(Modifier.padding(top=12.dp).size(54.dp).clip(CircleShape).background(Color.White).graphicsLayer{scaleX=shimmer;scaleY=shimmer},contentAlignment=Alignment.Center) { Icon(Icons.Default.PlayArrow,null,tint=Color(0xFF171520),modifier=Modifier.size(32.dp)) }
+            Box(Modifier.padding(top=12.dp).size(58.dp).graphicsLayer{rotationZ=if(playing)discRotation else 0f}.clip(CircleShape).background(Brush.radialGradient(listOf(Color(0xFFAAAAB2),Color(0xFF30313A),Color(0xFF090A12)))).border(1.dp,Color.White.copy(alpha=.3f),CircleShape),contentAlignment=Alignment.Center) {
+                artwork?.let { Image(it.asImageBitmap(),null,Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop) }
+                Box(Modifier.size(5.dp).clip(CircleShape).background(Color(0xFF08090D)))
+            }
         }
     }
 }
