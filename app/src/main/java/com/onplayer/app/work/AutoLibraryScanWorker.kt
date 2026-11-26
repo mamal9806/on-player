@@ -19,7 +19,6 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.onplayer.app.MainActivity
-import com.onplayer.app.R
 import com.onplayer.app.data.KNOWN_AUDIO_URIS_KEY
 import com.onplayer.app.data.MediaRepository
 import com.onplayer.app.data.onPlayerDataStore
