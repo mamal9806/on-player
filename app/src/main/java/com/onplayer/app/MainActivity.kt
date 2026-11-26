@@ -46,8 +46,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-        Slider(value=if(dur>0L)pos.toFloat().coerceIn(0f,dur.toFloat())else 0f,onValueChange={v->if(dur>0L)controller?.seekTo(v.toLong())},valueRange=0f..(dur.coerceAtLeast(1L).toFloat()),modifier=Modifier.fillMaxWidth().height(18.dp),colors=SliderDefaults.colors(thumbColor=accent,activeTrackColor=accent,inactiveTrackColor=if(dark)Color.White.copy(alpha=0.15f)else Color.Black.copy(alpha=0.10f)) )
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
