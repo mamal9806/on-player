@@ -646,7 +646,7 @@ private fun GlassPlayButton(playing: Boolean, accent: Color, onClick: () -> Unit
         Icon(
             if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
             contentDescription = if (playing) "Pause" else "Play",
-            tint = accent.copy(red = (accent.red * 0.28f).coerceIn(0f,1f), green = (accent.green * 0.28f).coerceIn(0f,1f), blue = (accent.blue * 0.28f).coerceIn(0f,1f),
+            tint = accent.copy(red = (accent.red * 0.28f).coerceIn(0f,1f), green = (accent.green * 0.28f).coerceIn(0f,1f), blue = (accent.blue * 0.28f).coerceIn(0f,1f)),
             modifier = Modifier.size(39.dp)
         )
     }
