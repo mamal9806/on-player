@@ -1,12 +1,19 @@
 package com.onplayer.app.ui
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import android.view.ViewGroup
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
@@ -15,9 +22,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -35,6 +50,28 @@ import androidx.navigation.NavHostController
 import com.onplayer.app.data.MediaFile
 import com.onplayer.app.data.MediaCategory
 
+private data class AudioMeta(val title:String,val artist:String,val album:String,val artwork:Bitmap?)
+
+@Composable
+private fun rememberAudioMeta(file:MediaFile):AudioMeta {
+    val context=LocalContext.current
+    val initial=AudioMeta(file.name,"Unknown artist","",null)
+    val meta by produceState(initial,file.uri) {
+        value=withContext(Dispatchers.IO) {
+            val retriever=MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(context,file.uri)
+                val title=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)?:file.name
+                val artist=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)?: "Unknown artist"
+                val album=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)?: ""
+                val art=retriever.embeddedPicture?.let { BitmapFactory.decodeByteArray(it,0,it.size) }
+                AudioMeta(title,artist,album,art)
+            } catch (_:Exception) { initial } finally { try { retriever.release() } catch (_:Exception) {} }
+        }
+    }
+    return meta
+}
+
 @Composable
 fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel, nav: NavHostController) {
     val context = LocalContext.current
@@ -48,6 +85,8 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
     }
     if (file.category == MediaCategory.Images) { ImagePreview(file, files, vm, nav); return }
     val player = remember(file.uri) { ExoPlayer.Builder(context).build().apply { setMediaItem(MediaItem.fromUri(file.uri)); prepare(); playWhenReady = false } }
+    val audioMeta = rememberAudioMeta(file)
+    val visualizer = rememberInfiniteTransition(label="music-bars")
     val timerScope = rememberCoroutineScope()
     var sleepDialog by remember { mutableStateOf(false) }
     var sleepJob by remember(file.uri) { mutableStateOf<Job?>(null) }
@@ -91,7 +130,20 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
             IconButton(onClick = { fullscreen = true }) { Icon(Icons.Default.Fullscreen, null, tint = Color.White) }
             IconButton(onClick = { rotation = (rotation + 90f) % 360f }) { Icon(Icons.Default.ScreenRotation, null, tint = Color.White) }
         }
-        AndroidView(factory = { ctx -> PlayerView(ctx).apply { playerView=this; this.player=player; useController=true; resizeMode=aspect } }, update = { it.player=player; it.resizeMode=aspect }, modifier = Modifier.fillMaxWidth().weight(1f).background(Color.Black,RoundedCornerShape(24.dp)).graphicsLayer { rotationZ=rotation })
+        if(file.category==MediaCategory.Audio) {
+            Column(Modifier.fillMaxWidth().weight(1f).background(Brush.verticalGradient(listOf(Color(0xFF29213F),Color(0xFF090910))),RoundedCornerShape(26.dp)).padding(18.dp),horizontalAlignment=Alignment.Center,verticalArrangement=Arrangement.Center) {
+                if(audioMeta.artwork!=null) Image(audioMeta.artwork!!.asImageBitmap(),contentDescription="Album cover",modifier=Modifier.size(190.dp).clip(RoundedCornerShape(28.dp)),contentScale=ContentScale.Crop)
+                else Box(Modifier.size(190.dp).background(Brush.linearGradient(listOf(Color(0xFF8B5CF6),Color(0xFF3035B8))),RoundedCornerShape(28.dp)),contentAlignment=Alignment.Center){Icon(Icons.Default.MusicNote,null,tint=Color.White,modifier=Modifier.size(86.dp))}
+                Text(audioMeta.title,color=Color.White,style=MaterialTheme.typography.titleLarge,maxLines=1,modifier=Modifier.padding(top=18.dp))
+                Text(audioMeta.artist+(if(audioMeta.album.isNotBlank()) " • "+audioMeta.album else ""),color=Color(0xFFBDB6D6),maxLines=1)
+                Row(Modifier.height(90.dp).padding(top=16.dp),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.Bottom) {
+                    repeat(18) { i ->
+                        val bar=visualizer.animateFloat(initialValue=.18f,targetValue=.28f+(i%5)*.12f,animationSpec=infiniteRepeatable(tween(550+i*35,delayMillis=i*45),RepeatMode.Reverse),label="bar-${i}")
+                        Box(Modifier.width(7.dp).height((bar.value*88).dp).background(Brush.verticalGradient(listOf(Color(0xFFB99AFF),Color(0xFF6041C9))),RoundedCornerShape(6.dp)))
+                    }
+                }
+            }
+        } else AndroidView(factory = { ctx -> PlayerView(ctx).apply { playerView=this; this.player=player; useController=true; resizeMode=aspect } }, update = { it.player=player; it.resizeMode=aspect }, modifier = Modifier.fillMaxWidth().weight(1f).background(Color.Black,RoundedCornerShape(24.dp)).graphicsLayer { rotationZ=rotation })
         Column(Modifier.fillMaxWidth().padding(top=12.dp).background(Brush.verticalGradient(listOf(Color(0xAA29243E),Color(0xAA171722))),RoundedCornerShape(24.dp)).padding(14.dp)) {
             Text(file.name, color=Color.White, style=MaterialTheme.typography.titleMedium, maxLines=1)
             Text(file.category.label+" • "+file.sizeText, color=Color(0xFFBDB6D6), style=MaterialTheme.typography.labelSmall)
