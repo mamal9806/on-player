@@ -67,7 +67,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-private val Purple = Color(0xFFB18AFF)
+private val Purple = Color(0xFFFF536A)
 private val Deep = Color(0xFF090A12)
 private val CardDark = Color(0xFF151723)
 private val Subtle = Color(0xFF9B9BAF)
@@ -121,8 +121,8 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
     }
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
     val isAmoled = themeMode == "AMOLED Black"
-    val isAccentTheme = themeMode in setOf("Red", "Blue", "Green")
-    val accent = when (themeMode) { "Red" -> Color(0xFFFF4D5E); "Blue" -> Color(0xFF3D8BFF); "Green" -> Color(0xFF20C997); else -> Purple }
+    val isAccentTheme = false
+    val accent = Color(0xFFFF536A)
     val dark = isAccentTheme || isAmoled || (themeMode != "Light" && (themeMode != "System" || systemDark))
     val background = when { isAmoled -> Color.Black; dark -> Deep; else -> Color(0xFFF5F4FA) }
     val foreground = if (dark) Color.White else Color(0xFF22232E)
@@ -454,7 +454,7 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
             colors=CardDefaults.cardColors(containerColor=if(dark) CardDark else Color.White)
         ) {
             Column(Modifier.padding(16.dp)) {
-                listOf("Dark","Light","System","AMOLED Black","Red","Blue","Green").forEach { mode ->
+                listOf("Dark","Light","System","AMOLED Black").forEach { mode ->
                     Row(
                         Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
                             .clickable { vm.setTheme(mode) }.padding(vertical=13.dp,horizontal=4.dp),
@@ -465,7 +465,7 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
                             contentDescription=null,tint=Purple
                         )
                         Text(mode,color=fg,modifier=Modifier.weight(1f).padding(start=12.dp))
-                        if(theme==mode) Icon(Icons.Default.CheckCircle,contentDescription="Selected",tint=when(mode) { "Red" -> Color(0xFFFF4D5E); "Blue" -> Color(0xFF3D8BFF); "Green" -> Color(0xFF20C997); else -> Purple })
+                        if(theme==mode) Icon(Icons.Default.CheckCircle,contentDescription="Selected",tint=Purple)
                     }
                 }
             }
