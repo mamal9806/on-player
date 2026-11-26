@@ -41,14 +41,18 @@ class MediaRepository(private val context: Context) {
         safely {
             val filesUri = MediaStore.Files.getContentUri("external")
             val p = arrayOf(MediaStore.Files.FileColumns._ID, MediaStore.Files.FileColumns.DISPLAY_NAME, MediaStore.Files.FileColumns.MIME_TYPE, MediaStore.Files.FileColumns.SIZE, MediaStore.Files.FileColumns.DATE_MODIFIED)
-            resolver.query(filesUri, p, "${MediaStore.Files.FileColumns.MEDIA_TYPE}=0", null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")?.use { cursor ->
+            resolver.query(filesUri, p, null, null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC")?.use { cursor ->
                 while (cursor.moveToNext()) {
                     val name = cursor.getString(1) ?: continue
                     val ext = name.substringAfterLast('.', "").lowercase()
-                    val category = when (ext) {
-                        "pdf", "doc", "docx", "txt", "rtf", "odt", "xls", "xlsx", "csv", "ppt", "pptx", "odp" -> MediaCategory.Documents
-                        "zip", "rar", "7z", "tar", "gz", "bz2", "xz", "tgz" -> MediaCategory.Archives
-                        "apk", "apks", "xapk" -> MediaCategory.APK
+                    val mime = cursor.getString(2).orEmpty().lowercase()
+                    val category = when {
+                        mime.startsWith("image/") || ext in setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif") -> MediaCategory.Images
+                        mime.startsWith("video/") || ext in setOf("mp4", "mkv", "webm", "avi", "mov", "3gp", "m4v", "mpeg", "mpg") -> MediaCategory.Videos
+                        mime.startsWith("audio/") || ext in setOf("mp3", "m4a", "aac", "wav", "flac", "ogg", "opus", "wma") -> MediaCategory.Audio
+                        ext in setOf("pdf", "doc", "docx", "txt", "rtf", "odt", "xls", "xlsx", "csv", "ppt", "pptx", "odp") || mime.startsWith("text/") || mime.contains("pdf") -> MediaCategory.Documents
+                        ext in setOf("zip", "rar", "7z", "tar", "gz", "bz2", "xz", "tgz") || mime.contains("zip") || mime.contains("rar") -> MediaCategory.Archives
+                        ext in setOf("apk", "apks", "xapk") || mime.contains("android.package-archive") -> MediaCategory.APK
                         else -> MediaCategory.Others
                     }
                     val id = cursor.getLong(0)
