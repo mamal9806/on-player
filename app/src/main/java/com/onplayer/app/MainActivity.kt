@@ -578,7 +578,7 @@ private fun PlaylistsTab(
                 Button(onClick={showAddSongs=true},modifier=Modifier.weight(1f)) {
                     Icon(Icons.Default.Add,null);Spacer(Modifier.width(6.dp));Text("Add songs")
                 }
-                OutlinedButton(onClick={onDelete(selected.id)) {
+                OutlinedButton(onClick={onDelete(selected.id)}) {
                     Icon(Icons.Default.DeleteOutline,null);Spacer(Modifier.width(5.dp));Text("Delete playlist")
                 }
             }
