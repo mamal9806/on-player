@@ -90,7 +90,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
 
     DisposableEffect(context, vm) {
         val receiver = object : BroadcastReceiver() {
-            override fun onReceive(context: android.content.Context?, intent: Intent?) {
+            override fun onReceive(context: android.content.Context, intent: Intent?) {
                 vm.scan()
             }
         }
