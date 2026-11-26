@@ -42,6 +42,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import android.content.ComponentName
+import com.onplayer.app.OnPlayerService
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.compose.ui.window.Dialog
@@ -75,6 +79,7 @@ private fun rememberAudioMeta(file:MediaFile):AudioMeta {
 @Composable
 fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel, nav: NavHostController) {
     val context = LocalContext.current
+    val controller = rememberMediaController(context)
     if (file == null) {
         Column(Modifier.fillMaxSize().padding(bottom = 90.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Icon(Icons.Default.PlayCircle, null, tint = Color(0xFF9B4DFF), modifier = Modifier.size(72.dp))
@@ -84,13 +89,40 @@ fun PlayerScreen(file: MediaFile?, files: List<MediaFile>, vm: OnPlayerViewModel
         return
     }
     if (file.category == MediaCategory.Images) { ImagePreview(file, files, vm, nav); return }
-    val player = remember(file.uri) { ExoPlayer.Builder(context).build().apply { setMediaItem(MediaItem.fromUri(file.uri)); prepare(); playWhenReady = false } }
+    if (controller == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF9B4DFF)) }
+        return
+    }
+    LaunchedEffect(controller, file.uri) {
+        controller.setMediaItem(MediaItem.fromUri(file.uri))
+        controller.prepare()
+        controller.playWhenReady = false
+    }
+    PlayerScreenContent(file, files, vm, nav, controller)
+}
+
+@Composable
+private fun rememberMediaController(context: android.content.Context): MediaController? {
+    val future = remember(context) {
+        MediaController.Builder(context, SessionToken(context, ComponentName(context, OnPlayerService::class.java))).buildAsync()
+    }
+    var controller by remember { mutableStateOf<MediaController?>(null) }
+    DisposableEffect(future) {
+        future.addListener(Runnable { controller = try { future.get() } catch (_: Exception) { null } }, context.mainExecutor)
+        onDispose { MediaController.releaseFuture(future) }
+    }
+    return controller
+}
+
+@Composable
+private fun PlayerScreenContent(file: MediaFile, files: List<MediaFile>, vm: OnPlayerViewModel, nav: NavHostController, player: MediaController) {
+    val context = LocalContext.current
     val audioMeta = rememberAudioMeta(file)
     val visualizer = rememberInfiniteTransition(label="music-bars")
     val timerScope = rememberCoroutineScope()
     var sleepDialog by remember { mutableStateOf(false) }
     var sleepJob by remember(file.uri) { mutableStateOf<Job?>(null) }
-    DisposableEffect(player) { onDispose { sleepJob?.cancel(); player.release() } }
+    DisposableEffect(file.uri) { onDispose { sleepJob?.cancel() } } }
     val playable = remember(files) { files.filter { it.isPlayable } }
     val currentIndex = playable.indexOfFirst { it.uri == file.uri }
     var isPlaying by remember(file.uri) { mutableStateOf(false) }
