@@ -5,14 +5,12 @@ import android.content.ComponentName
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.media.MediaMetadataRetriever
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -47,7 +45,6 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import androidx.navigation.NavHostController
 import androidx.compose.ui.platform.LocalContext
 import com.onplayer.app.data.MediaCategory
 import com.onplayer.app.data.MediaFile
@@ -99,7 +96,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
             override fun onIsPlayingChanged(isPlaying: Boolean) = vm.setPlaybackActive(isPlaying)
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 val uri = mediaItem?.localConfiguration?.uri ?: return
-                files.firstOrNull { it.uri == uri }?.let(vm::rememberLastPlayed)
+                files.firstOrNull { it.uri == uri }?.let(vm::open)
             }
         }
         controller?.addListener(listener)
