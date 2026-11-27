@@ -581,6 +581,7 @@ fun PlayerScreen(
                 GlassPlayButton(
                     playing = playing,
                     accent = dynamicAccent,
+                    isDark = isDarkPlayer,
                     onClick = { if (player.isPlaying) player.pause() else player.play() }
                 )
                 GlassIconButton(
@@ -628,7 +629,8 @@ private fun GlassIconButton(
     description: String,
     onClick: () -> Unit,
     diameter: Dp,
-    active: Boolean = false
+    active: Boolean = false,
+    isDark: Boolean = MaterialTheme.colorScheme.background.luminance() < 0.5f
 ) {
     val shape = CircleShape
     val interaction = remember { MutableInteractionSource() }
@@ -641,16 +643,16 @@ private fun GlassIconButton(
             .background(
                 Brush.linearGradient(
                     listOf(
-                        Color.White.copy(alpha = if (active) 0.72f else 0.54f),
-                        Color.White.copy(alpha = 0.30f),
-                        if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF26243A).copy(alpha = 0.34f) else Color(0xFFE9EAF2).copy(alpha = 0.12f)
+                        if (isDark) Color(0xFF272532).copy(alpha = if (active) 0.92f else 0.82f) else Color(0xFFFFFFFF).copy(alpha = 0.94f),
+                        if (isDark) Color(0xFF191821).copy(alpha = 0.88f) else Color(0xFFE5E6EC).copy(alpha = 0.88f),
+                        if (active) Color(0xFF9B65F5).copy(alpha = 0.32f) else if (isDark) Color(0xFF30303D) else Color(0xFFF4F4F7)
                     )
                 )
             )
             .border(
                 1.dp,
                 Brush.linearGradient(
-                    listOf(Color.White.copy(alpha = 0.76f), Color.White.copy(alpha = 0.30f), if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color.White.copy(alpha = 0.28f) else Color(0xFFBFC3D2).copy(alpha = 0.35f))
+                    listOf(if (isDark) Color.White.copy(alpha = 0.28f) else Color(0xFF8E929E).copy(alpha = 0.42f), if (isDark) Color.White.copy(alpha = 0.12f) else Color(0xFFBFC3D2).copy(alpha = 0.35f), if (isDark) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.82f))
                 ),
                 shape
             )
@@ -661,40 +663,35 @@ private fun GlassIconButton(
         Icon(
             icon,
             contentDescription = description,
-            tint = if (active) Color(0xFFFF6B83) else if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color.White.copy(alpha = 0.94f) else Color(0xFF20212A),
+            tint = if (active) Color(0xFFD6B8FF) else if (isDark) Color.White.copy(alpha = 0.94f) else Color(0xFF292B35),
             modifier = Modifier.size(if (diameter >= 50.dp) 28.dp else 21.dp)
         )
     }
 }
 
 @Composable
-private fun GlassPlayButton(playing: Boolean, accent: Color, onClick: () -> Unit) {
+private fun GlassPlayButton(playing: Boolean, accent: Color, isDark: Boolean, onClick: () -> Unit) {
     Box(
         Modifier.size(76.dp)
-            .shadow(20.dp, CircleShape, clip = false)
+            .shadow(if (isDark) 12.dp else 7.dp, CircleShape, clip = false)
             .clip(CircleShape)
             .background(
                 Brush.linearGradient(
-                    listOf(Color.White.copy(alpha = 0.96f), accent.copy(alpha = 0.65f), Color.White.copy(alpha = 0.30f))
+                    if (isDark) listOf(accent.copy(alpha = 0.92f), accent.copy(alpha = 0.72f), Color(0xFF242230)) else listOf(accent.copy(alpha = 0.92f), accent.copy(alpha = 0.76f), Color(0xFFCCB7F2))
                 )
             )
             .border(
                 1.dp,
-                Brush.linearGradient(listOf(Color.White, Color.White.copy(alpha = 0.18f))),
+                Brush.linearGradient(listOf(Color.White.copy(alpha = 0.70f), Color.White.copy(alpha = 0.12f))),
                 CircleShape
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.58f), Color.Transparent, Color.Transparent))
-            )
-        )
         Icon(
             if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
             contentDescription = if (playing) "Pause" else "Play",
-            tint = if (accent.luminance() < 0.45f) Color.White else Color(0xFF171820),
+            tint = Color.White,
             modifier = Modifier.size(39.dp)
         )
     }
