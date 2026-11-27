@@ -239,7 +239,8 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                 containerColor=background,
                 bottomBar={
                     Column {
-                        if (current != null) MiniPlayer(current!!, playing, dark, controller, onClick={playerOpen=true}, onToggle={ if (controller?.isPlaying==true) controller.pause() else controller?.play() })
+                        val miniTrack = current ?: lastPlayed
+                        if (miniTrack != null) MiniPlayer(miniTrack, playing, dark, controller, onClick={ vm.open(miniTrack); playerOpen=true }, onToggle={ if (controller?.isPlaying==true) controller.pause() else controller?.play() })
                         Row(
                             Modifier.fillMaxWidth().padding(horizontal=12.dp, vertical=7.dp)
                                 .clip(RoundedCornerShape(28.dp))
