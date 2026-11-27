@@ -3,6 +3,7 @@ package com.onplayer.app.ui
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
+import android.provider.MediaStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -104,8 +105,10 @@ private fun rememberTrackArtwork(file: MediaFile): TrackArtwork {
                     ?.takeIf { it.isNotBlank() && it != "<unknown>" } ?: file.displayArtist
                 val album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)
                     ?.takeIf { it.isNotBlank() && it != "<unknown>" } ?: file.displayAlbum
-                val bitmap = retriever.embeddedPicture?.let { bytes ->
-                    // Decode album art to a bounded size to avoid large allocations on UI transitions.
+
+                // First try the embedded image. If it is missing, use MediaStore's
+                // album-art endpoint so files indexed by Android's music app also work.
+                val embedded = retriever.embeddedPicture?.let { bytes ->
                     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
                     val sample = maxOf(1, maxOf(bounds.outWidth, bounds.outHeight) / 640)
@@ -114,7 +117,25 @@ private fun rememberTrackArtwork(file: MediaFile): TrackArtwork {
                         inPreferredConfig = Bitmap.Config.RGB_565
                     })
                 }
-                TrackArtwork(bitmap, title, artist, album)
+                val albumArt = if (embedded == null) {
+                    var albumId: Long? = null
+                    context.contentResolver.query(
+                        file.uri,
+                        arrayOf(MediaStore.Audio.Media.ALBUM_ID),
+                        null, null, null
+                    )?.use { cursor ->
+                        if (cursor.moveToFirst()) albumId = cursor.getLong(0)
+                    }
+                    albumId?.let { id ->
+                        val artUri = android.net.Uri.parse("content://media/external/audio/albumart/$id")
+                        context.contentResolver.openInputStream(artUri)?.use { stream ->
+                            BitmapFactory.decodeStream(stream, null, BitmapFactory.Options().apply {
+                                inPreferredConfig = Bitmap.Config.RGB_565
+                            })
+                        }
+                    }
+                } else null
+                TrackArtwork(embedded ?: albumArt, title, artist, album)
             } catch (_: Exception) {
                 initial
             } finally {
@@ -124,7 +145,6 @@ private fun rememberTrackArtwork(file: MediaFile): TrackArtwork {
     }
     return data
 }
-
 @Composable
 fun PlayerScreen(
     file: MediaFile?,
