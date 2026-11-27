@@ -361,7 +361,7 @@ fun PlayerScreen(
             Image(
                 bitmap.asImageBitmap(),
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize().blur(42.dp).graphicsLayer { scaleX = 1.22f; scaleY = 1.22f },
+                modifier = Modifier.fillMaxSize().blur(24.dp).graphicsLayer { scaleX = 1.22f; scaleY = 1.22f },
                 contentScale = ContentScale.Crop
             )
         }
@@ -464,7 +464,7 @@ fun PlayerScreen(
                         drawCircle(dynamicAccent.copy(alpha = 0.32f), size.minDimension * 0.49f, center, style = Stroke(width = size.minDimension * 0.012f))
                     }
                     Box(
-                        Modifier.fillMaxSize(0.42f).clip(CircleShape)
+                        Modifier.fillMaxSize(0.46f).clip(CircleShape)
                             .border(2.dp, Color(0xFF9B9DA5), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
