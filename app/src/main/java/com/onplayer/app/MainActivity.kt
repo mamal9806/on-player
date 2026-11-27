@@ -99,7 +99,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
     val playing by vm.isPlaying.collectAsState()
     val themeMode by vm.themeMode.collectAsState()
     val languagePrefs = remember(context) { context.getSharedPreferences("on_player_settings", android.content.Context.MODE_PRIVATE) }
-    var appLanguage by remember { mutableStateOf(languagePrefs.getString("app_language", "English") ?: "English")
+    var appLanguage by remember { mutableStateOf(languagePrefs.getString("app_language", "English") ?: "English") }
     var tab by remember { mutableStateOf(Tab.Home) }
     var playerOpen by remember { mutableStateOf(false) }
     var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
