@@ -224,6 +224,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
         if (playerOpen) {
             PlayerScreen(
                 file = current,
+                appLanguage = appLanguage,
                 files = files,
                 vm = vm,
                 player = controller,
