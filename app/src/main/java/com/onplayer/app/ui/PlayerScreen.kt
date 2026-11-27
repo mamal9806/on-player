@@ -378,7 +378,7 @@ fun PlayerScreen(
 
     Box(Modifier.fillMaxSize()) {
         // Album artwork wallpaper: blurred and softly tinted behind the player controls.
-        artwork.bitmap?.let { bitmap ->
+        if (isDarkPlayer) artwork.bitmap?.let { bitmap ->
             Image(
                 bitmap.asImageBitmap(),
                 contentDescription = null,
@@ -388,8 +388,8 @@ fun PlayerScreen(
         }
         val ambientPulse = rememberInfiniteTransition(label = "ambient wallpaper")
             .animateFloat(0.22f, 0.38f, infiniteRepeatable(tween(3200), RepeatMode.Reverse), label = "ambient pulse").value
-        Box(Modifier.fillMaxSize().background((if (isDarkPlayer) dynamicDeep else Color.White).copy(alpha = if (isDarkPlayer) ambientPulse else 0.30f)))
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(if (isDarkPlayer) listOf(dynamicAccent.copy(alpha = 0.22f), dynamicCompanion.copy(alpha = 0.20f), dynamicDeep.copy(alpha = 0.55f), Color(0xFF10131C).copy(alpha = 0.72f), Color(0xFF050609).copy(alpha = 0.92f)) else listOf(dynamicAccent.copy(alpha = 0.10f), dynamicCompanion.copy(alpha = 0.08f), Color.White.copy(alpha = 0.65f), Color(0xFFF4F4F8).copy(alpha = 0.90f), Color(0xFFF5F5F7).copy(alpha = 0.96f))))) {
+        Box(Modifier.fillMaxSize().background(if (isDarkPlayer) dynamicDeep.copy(alpha = ambientPulse) else Color(0xFFF8F8FC)))
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(if (isDarkPlayer) listOf(dynamicAccent.copy(alpha = 0.18f), dynamicCompanion.copy(alpha = 0.14f), dynamicDeep.copy(alpha = 0.52f), Color(0xFF10131C).copy(alpha = 0.80f), Color(0xFF050609)) else listOf(Color(0xFFFFF8FC), Color(0xFFF8F8FC), Color(0xFFF1F2F7), Color(0xFFF7F7FA))))) {
 
         Column(
             Modifier.fillMaxSize()
