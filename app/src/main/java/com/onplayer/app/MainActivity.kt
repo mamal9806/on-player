@@ -71,7 +71,7 @@ import java.util.Locale
 
 private val Purple = Color(0xFF8B5CF6)
 private val LocalAppLanguage = compositionLocalOf { "English" }
-@Composable private fun tr(value: String): String = if (LocalAppLanguage.current == "فارسی") mapOf("Settings" to "تنظیمات","LANGUAGE" to "زبان","APPEARANCE" to "ظاهر","LIBRARY" to "کتابخانه","PLAYBACK" to "پخش","ABOUT" to "درباره","Dark" to "تیره","Light" to "روشن","System" to "سیستم","AMOLED Black" to "مشکی AMOLED","Music library" to "کتابخانه موسیقی","Rescan" to "اسکن مجدد","Favorites" to "علاقه‌مندی‌ها","Clear" to "پاک کردن","Audio focus" to "تمرکز صوتی","Your library" to "کتابخانه من","No favorites yet" to "هنوز آهنگ محبوبی ندارید","Pick a song" to "انتخاب آهنگ","Search music" to "جستجوی موسیقی","Song, artist or album" to "نام آهنگ، خواننده یا آلبوم","Recently added" to "اخیراً اضافه شده","See all" to "مشاهده همه","Choose music" to "انتخاب موسیقی","Your music awaits" to "موسیقی شما منتظر است","Choose a song to start listening." to "برای شروع یک آهنگ انتخاب کنید","Now Playing" to "در حال پخش","Close player" to "بستن پخش‌کننده","More options" to "گزینه‌های بیشتر","Add to playlist" to "افزودن به فهرست پخش","Rename song" to "تغییر نام آهنگ","Delete from device" to "حذف از دستگاه").getOrDefault(value, value) else value
+@Composable private fun tr(value: String): String = if (LocalAppLanguage.current == "فارسی") mapOf("Settings" to "تنظیمات","LANGUAGE" to "زبان","APPEARANCE" to "ظاهر","LIBRARY" to "کتابخانه","PLAYBACK" to "پخش","ABOUT" to "درباره","Dark" to "تیره","Light" to "روشن","System" to "سیستم","AMOLED Black" to "مشکی AMOLED","Music library" to "کتابخانه موسیقی","Rescan" to "اسکن مجدد","Favorites" to "علاقه‌مندی‌ها","Clear" to "پاک کردن","Audio focus" to "تمرکز صوتی","Your library" to "کتابخانه من","No favorites yet" to "هنوز آهنگ محبوبی ندارید","Pick a song" to "انتخاب آهنگ","Search music" to "جستجوی موسیقی","Song, artist or album" to "نام آهنگ، خواننده یا آلبوم","Recently added" to "اخیراً اضافه‌شده","See all" to "مشاهده همه","Choose music" to "انتخاب موسیقی","Your music awaits" to "موسیقی شما منتظر است","Choose a song to start listening." to "برای شروع، یک آهنگ انتخاب کنید","Now Playing" to "در حال پخش","Close player" to "بستن پخش‌کننده","More options" to "گزینه‌های بیشتر","Add to playlist" to "افزودن به فهرست پخش","Rename song" to "تغییر نام آهنگ","Delete from device" to "حذف از دستگاه","ON PLAYER" to "آن پلیر","Good music.\\nNo distractions." to "موسیقی خوب، بدون حواس‌پرتی.","Rescan music" to "اسکن دوباره موسیقی","Open file" to "باز کردن فایل","All songs" to "همه آهنگ‌ها","On Player requests Android audio focus when playback starts." to "آن پلیر هنگام شروع پخش، تمرکز صوتی را از اندروید دریافت می‌کند.","Version 1.0 • Music, beautifully simple" to "نسخه ۱٫۰ • موسیقی، ساده و زیبا","Clear favorites?" to "علاقه‌مندی‌ها پاک شوند؟","This removes all saved favorites from On Player." to "این کار همه آهنگ‌های ذخیره‌شده در آن پلیر را پاک می‌کند.","Cancel" to "لغو","Make it yours" to "شخصی‌سازی موسیقی","Create a playlist and collect your favorite tracks." to "فهرست پخش بساز و آهنگ‌های محبوبت را جمع کن.","Create playlist" to "ساخت فهرست پخش","Add songs" to "افزودن آهنگ‌ها","Delete playlist" to "حذف فهرست پخش","This playlist is empty. Add some music." to "این فهرست خالی است؛ چند آهنگ به آن اضافه کن.","New playlist" to "فهرست پخش جدید","Playlist name" to "نام فهرست پخش","e.g. Late night" to "مثلاً شبانه","Create" to "ساخت","Your library is empty." to "کتابخانه موسیقی خالی است.","Done" to "تمام","Home" to "خانه","Library" to "کتابخانه","Playlists" to "فهرست‌های پخش","Search" to "جستجو","Your playlists" to "فهرست‌های پخش شما","playlists saved on this device" to "فهرست پخش ذخیره‌شده","songs" to "آهنگ","tracks scanned" to "آهنگ بررسی‌شده","saved tracks" to "آهنگ ذخیره‌شده","Add music to" to "افزودن موسیقی به").getOrDefault(value, value) else value
 
 private val Deep = Color(0xFF090A12)
 private val CardDark = Color(0xFF151723)
@@ -270,7 +270,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                                     horizontalAlignment=Alignment.CenterHorizontally
                                 ) {
                                     Icon(icon,null,tint=if(selected) Purple else muted,modifier=Modifier.size(19.dp))
-                                    Text(item.title,color=if(selected) Purple else muted,fontSize=8.sp,maxLines=1)
+                                    Text(tr(item.title),color=if(selected) Purple else muted,fontSize=8.sp,maxLines=1)
                                 }
                             }
                         }
@@ -280,7 +280,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                 Box(Modifier.fillMaxSize().padding(padding)) {
                     when(tab) {
                         Tab.Home -> HomeTab(files, lastPlayed, playing, scanning, scanError, dark, foreground, muted, surface, onRefresh={vm.scan()}, onPick={audioPicker.launch(arrayOf("audio/*"))}, onOpenSong={vm.open(it);playerOpen=true}, onLibrary={tab=Tab.Library})
-                        Tab.Library -> SongListTab("Your library",files,scanning,scanError,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))})
+                        Tab.Library -> SongListTab(tr("Your library"),files,scanning,scanError,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))})
                         Tab.Playlists -> PlaylistsTab(
                             playlists = playlists,
                             files = files,
@@ -296,7 +296,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                             onRemoveSong = { id, song -> vm.removeFromPlaylist(id, song) },
                             onOpenSong = { vm.open(it); playerOpen = true }
                         )
-                        Tab.Favorites -> SongListTab("Favorites",files.filter{it.uri.toString() in favorites},scanning,null,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))},emptyText="No favorites yet")
+                        Tab.Favorites -> SongListTab(tr("Favorites"),files.filter{it.uri.toString() in favorites},scanning,null,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))},emptyText="No favorites yet")
                         Tab.Search -> SearchTab(files,favorites,dark,foreground,muted,onOpenSong={vm.open(it);playerOpen=true},onFavorite={vm.toggleFavorite(it)})
                         Tab.Settings -> SettingsTab(themeMode,dark,foreground,muted,vm,onLanguageChanged={ appLanguage=it })
                     }
@@ -343,8 +343,8 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
         }
         item {
             Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                QuickAction("All songs",files.size,Icons.Default.LibraryMusic,Modifier.weight(1f),dark,fg,onLibrary)
-                QuickAction("Recently added",files.take(12).size,Icons.Default.History,Modifier.weight(1f),dark,fg,onLibrary)
+                QuickAction(tr("All songs"),files.size,Icons.Default.LibraryMusic,Modifier.weight(1f),dark,fg,onLibrary)
+                QuickAction(tr("Recently added"),files.take(12).size,Icons.Default.History,Modifier.weight(1f),dark,fg,onLibrary)
             }
         }
         item { Row(verticalAlignment=Alignment.CenterVertically) { Text(tr("Recently added"),color=fg,fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f)); Text(tr("See all"),color=Purple,modifier=Modifier.clickable(onClick=onLibrary)) } }
@@ -384,11 +384,11 @@ private fun QuickAction(title:String,count:Int,icon:androidx.compose.ui.graphics
 @Composable
 private fun SongListTab(title:String,songs:List<MediaFile>,loading:Boolean,error:String?,dark:Boolean,fg:Color,muted:Color,onRefresh:()->Unit,onOpenSong:(MediaFile)->Unit,onPick:()->Unit,emptyText:String="No music found") {
     Column(Modifier.fillMaxSize().padding(horizontal=18.dp)) {
-        Text(title,color=fg,fontSize=27.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=24.dp,bottom=14.dp))
+        Text(tr(title),color=fg,fontSize=27.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=24.dp,bottom=14.dp))
         if(loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         if(error!=null) Text(error,color=muted,modifier=Modifier.padding(bottom=8.dp))
         if(songs.isEmpty()) {
-            Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) { Column(horizontalAlignment=Alignment.CenterHorizontally) { Icon(Icons.Default.MusicNote,contentDescription=null,tint=Purple,modifier=Modifier.size(48.dp)); Text(emptyText,color=muted,modifier=Modifier.padding(top=12.dp)); Button(onClick=onPick,modifier=Modifier.padding(top=12.dp)){Text(tr("Pick a song"))} } }
+            Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) { Column(horizontalAlignment=Alignment.CenterHorizontally) { Icon(Icons.Default.MusicNote,contentDescription=null,tint=Purple,modifier=Modifier.size(48.dp)); Text(tr(emptyText),color=muted,modifier=Modifier.padding(top=12.dp)); Button(onClick=onPick,modifier=Modifier.padding(top=12.dp)){Text(tr("Pick a song"))} } }
         } else LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { items(songs,key={it.uri.toString()}) { SongRow(it,dark,fg,muted,onClick={onOpenSong(it)}) } }
         Row(Modifier.fillMaxWidth().padding(vertical=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick=onRefresh,modifier=Modifier.weight(1f)) { Icon(Icons.Default.Refresh,null);Spacer(Modifier.width(4.dp));Text(tr("Rescan")) }
@@ -512,7 +512,7 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
                     Icon(Icons.Default.LibraryMusic,null,tint=Purple)
                     Column(Modifier.weight(1f).padding(start=12.dp)) {
                         Text(tr("Music library"),color=fg,fontWeight=FontWeight.SemiBold)
-                        Text(files.size.toString()+" tracks scanned",color=muted,fontSize=12.sp)
+                        Text(files.size.toString()+" "+tr("tracks scanned"),color=muted,fontSize=12.sp)
                     }
                     TextButton(onClick={vm.scan()}) { Text(tr("Rescan")) }
                 }
@@ -521,7 +521,7 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
                     Icon(Icons.Default.Favorite,null,tint=Color(0xFFEA79A8))
                     Column(Modifier.weight(1f).padding(start=12.dp)) {
                         Text(tr("Favorites"),color=fg,fontWeight=FontWeight.SemiBold)
-                        Text(favorites.size.toString()+" saved tracks",color=muted,fontSize=12.sp)
+                        Text(favorites.size.toString()+" "+tr("saved tracks"),color=muted,fontSize=12.sp)
                     }
                     TextButton(onClick={confirmClearFavorites=true},enabled=favorites.isNotEmpty()) { Text(tr("Clear")) }
                 }
@@ -640,10 +640,10 @@ private fun PlaylistsTab(
                 IconButton(onClick=onBack) { Icon(Icons.Default.ArrowBack,null,tint=fg) }
             }
             Column(Modifier.weight(1f)) {
-                Text(if(selected == null) "Your playlists" else selected.name,color=fg,fontSize=27.sp,fontWeight=FontWeight.Bold)
+                Text(if(selected == null) tr("Your playlists") else selected.name,color=fg,fontSize=27.sp,fontWeight=FontWeight.Bold)
                 Text(
-                    if(selected == null) playlists.size.toString()+" playlists saved on this device"
-                    else selected.songUris.size.toString()+" songs",
+                    if(selected == null) playlists.size.toString()+" "+tr("playlists saved on this device")
+                    else selected.songUris.size.toString()+" "+tr("songs"),
                     color=muted,fontSize=12.sp
                 )
             }
@@ -682,7 +682,7 @@ private fun PlaylistsTab(
                                 }
                                 Column(Modifier.weight(1f).padding(horizontal=13.dp)) {
                                     Text(playlist.name,color=fg,fontWeight=FontWeight.SemiBold,fontSize=16.sp)
-                                    Text(playlist.songUris.size.toString()+" songs",color=muted,fontSize=12.sp)
+                                    Text(playlist.songUris.size.toString()+" "+tr("songs"),color=muted,fontSize=12.sp)
                                 }
                                 Icon(Icons.Default.ChevronRight,null,tint=muted)
                             }
@@ -742,7 +742,7 @@ private fun PlaylistsTab(
     if(showAddSongs && selected != null) {
         AlertDialog(
             onDismissRequest={showAddSongs=false},
-            title={Text("Add music to " + selected.name)},
+            title={Text(tr("Add music to") + " " + selected.name)},
             text={
                 if(files.isEmpty()) Text(tr("Your library is empty."))
                 else LazyColumn(Modifier.heightIn(max=420.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
