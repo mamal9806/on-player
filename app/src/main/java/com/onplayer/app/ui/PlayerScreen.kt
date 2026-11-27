@@ -638,7 +638,7 @@ private fun GlassIconButton(
     val pressed by interaction.collectIsPressedAsState()
     val pressScale by animateFloatAsState(if (pressed) 0.94f else 1f, animationSpec=tween(160), label="glass press")
     val lightFill = if (active) Color(0xFFEDE5FF) else Color(0xFFFFFFFF)
-    val lightEdge = if (active) Color(0xFFB9A0EE) else Color(0xFFD9DCE5)
+    val lightEdge = if (active) Color(0xFF8F6BDB) else Color(0xFFB2B8C5)
     Box(
         Modifier.size(diameter)
             .shadow(if (isDark) 10.dp else 3.dp, shape, clip = false)
@@ -655,8 +655,8 @@ private fun GlassIconButton(
                 )
             )
             .border(
-                1.dp,
-                if (isDark) Brush.linearGradient(listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.12f))) else Brush.linearGradient(listOf(lightEdge, Color.White)),
+                1.6.dp,
+                if (isDark) Brush.linearGradient(listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.12f))) else Brush.linearGradient(listOf(lightEdge, Color(0xFFE3E6ED), lightEdge)),
                 shape
             )
             .graphicsLayer { scaleX=pressScale; scaleY=pressScale }
@@ -676,7 +676,7 @@ private fun GlassIconButton(
 private fun GlassPlayButton(playing: Boolean, accent: Color, isDark: Boolean, onClick: () -> Unit) {
     Box(
         Modifier.size(76.dp)
-            .shadow(if (isDark) 12.dp else 4.dp, CircleShape, clip = false)
+            .shadow(if (isDark) 12.dp else 5.dp, CircleShape, clip = false)
             .clip(CircleShape)
             .background(
                 Brush.linearGradient(
@@ -684,8 +684,8 @@ private fun GlassPlayButton(playing: Boolean, accent: Color, isDark: Boolean, on
                 )
             )
             .border(
-                1.dp,
-                Brush.linearGradient(listOf(Color.White.copy(alpha = if (isDark) 0.70f else 0.55f), Color.White.copy(alpha = if (isDark) 0.12f else 0.32f))),
+                1.6.dp,
+                Brush.linearGradient(listOf(Color.White.copy(alpha = if (isDark) 0.70f else 0.82f), Color(0xFF8F6BDB).copy(alpha = if (isDark) 0.12f else 0.55f))),
                 CircleShape
             )
             .clickable(onClick = onClick),
