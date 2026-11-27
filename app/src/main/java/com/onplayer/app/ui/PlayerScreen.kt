@@ -428,7 +428,8 @@ fun PlayerScreen(
                     description = "Close player",
                     onClick = onBack,
                     diameter = 46.dp
-                )
+                
+                    artworkAccent = dynamicAccent,)
                 Column(
                     Modifier.weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -442,7 +443,8 @@ fun PlayerScreen(
                         description = "More options",
                         onClick = { moreExpanded = true },
                         diameter = 46.dp
-                    )
+                    
+                    artworkAccent = dynamicAccent,)
                     DropdownMenu(
                         expanded = moreExpanded,
                         onDismissRequest = { moreExpanded = false },
@@ -543,7 +545,8 @@ fun PlayerScreen(
                 }
                 GlassIconButton(
                     icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    description = if (isFavorite) "Remove favorite" else "Add favorite",
+                    description = if (isFavorite
+                    artworkAccent = dynamicAccent,) "Remove favorite" else "Add favorite",
                     onClick = { vm.toggleFavorite(file) },
                     diameter = 46.dp,
                     active = isFavorite
@@ -591,11 +594,13 @@ fun PlayerScreen(
                     onClick = { shuffle = !shuffle; player.shuffleModeEnabled = shuffle },
                     diameter = 42.dp,
                     active = shuffle
-                )
+                
+                    artworkAccent = dynamicAccent,)
                 GlassIconButton(
                     icon = Icons.Default.SkipPrevious,
                     description = "Previous track",
-                    onClick = { player.seekToPreviousMediaItem() },
+                    onClick = { player.seekToPreviousMediaItem(
+                    artworkAccent = dynamicAccent,) },
                     diameter = 50.dp
                 )
                 GlassPlayButton(
@@ -607,7 +612,8 @@ fun PlayerScreen(
                 GlassIconButton(
                     icon = Icons.Default.SkipNext,
                     description = "Next track",
-                    onClick = { player.seekToNextMediaItem() },
+                    onClick = { player.seekToNextMediaItem(
+                    artworkAccent = dynamicAccent,) },
                     diameter = 50.dp
                 )
                 GlassIconButton(
@@ -615,7 +621,8 @@ fun PlayerScreen(
                     description = "Repeat one",
                     onClick = {
                         repeatOne = !repeatOne
-                        player.repeatMode = if (repeatOne) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+                        player.repeatMode = if (repeatOne
+                    artworkAccent = dynamicAccent,) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
                     },
                     diameter = 42.dp,
                     active = repeatOne
@@ -651,14 +658,15 @@ private fun GlassIconButton(
     onClick: () -> Unit,
     diameter: Dp,
     active: Boolean = false,
+    artworkAccent: Color = Color(0xFF8B5CF6),
     isDark: Boolean = MaterialTheme.colorScheme.background.luminance() < 0.5f
 ) {
     val shape = CircleShape
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val pressScale by animateFloatAsState(if (pressed) 0.94f else 1f, animationSpec=tween(160), label="glass press")
-    val lightFill = if (active) Color(0xFFEDE5FF) else Color(0xFFFFFFFF)
-    val lightEdge = if (active) Color(0xFF8F6BDB) else Color(0xFFB2B8C5)
+    val lightFill = if (active) Color.lerp(Color.White, artworkAccent, 0.18f) else Color.lerp(Color.White, artworkAccent, 0.045f)
+    val lightEdge = Color.lerp(Color(0xFFADB4C2), artworkAccent, if (active) 0.52f else 0.30f)
     Box(
         Modifier.size(diameter)
             .shadow(if (isDark) 10.dp else 3.dp, shape, clip = false)
@@ -671,12 +679,12 @@ private fun GlassIconButton(
                         if (active) Color(0xFF9B65F5).copy(alpha = 0.32f) else Color(0xFF30303D)
                     )
                 ) else Brush.verticalGradient(
-                    listOf(lightFill, if (active) Color(0xFFE3D7FA) else Color(0xFFF4F5F8))
+                    listOf(lightFill, Color.lerp(Color(0xFFF5F6F9), artworkAccent, if (active) 0.15f else 0.035f))
                 )
             )
             .border(
                 1.6.dp,
-                if (isDark) Brush.linearGradient(listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.12f))) else Brush.linearGradient(listOf(lightEdge, Color(0xFFE3E6ED), lightEdge)),
+                if (isDark) Brush.linearGradient(listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.12f))) else Brush.linearGradient(listOf(lightEdge, Color.lerp(Color.White, artworkAccent, 0.16f), lightEdge)),
                 shape
             )
             .graphicsLayer { scaleX=pressScale; scaleY=pressScale }
