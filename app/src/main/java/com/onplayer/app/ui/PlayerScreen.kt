@@ -17,6 +17,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -134,8 +136,8 @@ fun PlayerScreen(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Default.MusicNote, contentDescription = null, tint = accent, modifier = Modifier.size(58.dp))
-                Text("Choose a song", color = foreground, modifier = Modifier.padding(top = 12.dp))
-                TextButton(onClick = onBack) { Text("Back") }
+                Text(tr("Choose a song"), color = foreground, modifier = Modifier.padding(top = 12.dp))
+                TextButton(onClick = onBack) { Text(tr("Back")) }
             }
         }
         return
@@ -231,10 +233,10 @@ fun PlayerScreen(
     if (showPlaylistPicker) {
         AlertDialog(
             onDismissRequest = { showPlaylistPicker = false },
-            title = { Text("Add to playlist") },
+            title = { Text(tr("Add to playlist")) },
             text = {
                 if (playlists.isEmpty()) {
-                    Text("You have no playlists yet. Create one to save this song.")
+                    Text(tr("You have no playlists yet. Create one to save this song."))
                 } else {
                     Column(Modifier.heightIn(max = 360.dp)) {
                         playlists.forEach { playlist ->
@@ -265,14 +267,14 @@ fun PlayerScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showPlaylistPicker = false }) { Text("Done") }
+                TextButton(onClick = { showPlaylistPicker = false }) { Text(tr("Done")) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     showPlaylistPicker = false
                     newPlaylistName = ""
                     showCreatePlaylist = true
-                }) { Text("New playlist") }
+                }) { Text(tr("New playlist")) }
             },
             containerColor = Color(0xFF242033),
             titleContentColor = Color.White,
@@ -283,13 +285,13 @@ fun PlayerScreen(
     if (showCreatePlaylist) {
         AlertDialog(
             onDismissRequest = { showCreatePlaylist = false },
-            title = { Text("Create playlist") },
+            title = { Text(tr("Create playlist")) },
             text = {
                 OutlinedTextField(
                     value = newPlaylistName,
                     onValueChange = { newPlaylistName = it },
                     singleLine = true,
-                    label = { Text("Playlist name") }
+                    label = { Text(tr("Playlist name")) }
                 )
             },
             confirmButton = {
@@ -297,10 +299,10 @@ fun PlayerScreen(
                     val id = vm.createPlaylist(newPlaylistName)
                     if (id != null) onAddToPlaylist(id, file)
                     showCreatePlaylist = false
-                }) { Text("Create") }
+                }) { Text(tr("Create")) }
             },
             dismissButton = {
-                TextButton(onClick = { showCreatePlaylist = false }) { Text("Cancel") }
+                TextButton(onClick = { showCreatePlaylist = false }) { Text(tr("Cancel")) }
             },
             containerColor = Color(0xFF242033),
             titleContentColor = Color.White,
@@ -311,23 +313,23 @@ fun PlayerScreen(
     if (showRenameDialog) {
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
-            title = { Text("Rename in On Player") },
+            title = { Text(tr("Rename in On Player")) },
             text = {
                 OutlinedTextField(
                     value = renameText,
                     onValueChange = { renameText = it },
                     singleLine = true,
-                    label = { Text("Song name") }
+                    label = { Text(tr("Song name")) }
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
                     onRenameTrack(file, renameText)
                     showRenameDialog = false
-                }) { Text("Save") }
+                }) { Text(tr("Save")) }
             },
             dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showRenameDialog = false }) { Text(tr("Cancel")) }
             },
             containerColor = Color(0xFF242033),
             titleContentColor = Color.White,
@@ -338,16 +340,16 @@ fun PlayerScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete this song?") },
-            text = { Text("The audio file will be deleted from your device. Android may ask you to confirm this action.") },
+            title = { Text(tr("Delete this song?")) },
+            text = { Text(tr("The audio file will be deleted from your device. Android may ask you to confirm this action.")) },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
                     onDeleteTrack(file)
-                }) { Text("Delete", color = Color(0xFFFF8796)) }
+                }) { Text(tr("Delete"), color = Color(0xFFFF8796)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteDialog = false }) { Text(tr("Cancel")) }
             },
             containerColor = Color(0xFF242033),
             titleContentColor = Color.White,
@@ -392,8 +394,8 @@ fun PlayerScreen(
                     Modifier.weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("ON PLAYER", color = dynamicAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.4.sp)
-                    Text("Now Playing", color = secondary, fontSize = 12.sp)
+                    Text(tr("ON PLAYER"), color = dynamicAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.4.sp)
+                    Text(tr("Now Playing"), color = secondary, fontSize = 12.sp)
                 }
                 Box {
                     GlassIconButton(
@@ -409,17 +411,17 @@ fun PlayerScreen(
                         containerColor = Color(0xFF242033)
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Add to playlist", color = Color.White) },
+                            text = { Text(tr("Add to playlist"), color = Color.White) },
                             leadingIcon = { Icon(Icons.Default.PlaylistAdd, null, tint = Color(0xFFD6B8FF)) },
                             onClick = { moreExpanded = false; showPlaylistPicker = true }
                         )
                         DropdownMenuItem(
-                            text = { Text("Rename song", color = Color.White) },
+                            text = { Text(tr("Rename song"), color = Color.White) },
                             leadingIcon = { Icon(Icons.Default.Edit, null, tint = Color(0xFFD6B8FF)) },
                             onClick = { moreExpanded = false; renameText = file.displayTitle; showRenameDialog = true }
                         )
                         DropdownMenuItem(
-                            text = { Text("Delete from device", color = Color(0xFFFFA0AA)) },
+                            text = { Text(tr("Delete from device"), color = Color(0xFFFFA0AA)) },
                             leadingIcon = { Icon(Icons.Default.DeleteOutline, null, tint = Color(0xFFFF8796)) },
                             onClick = { moreExpanded = false; showDeleteDialog = true }
                         )
@@ -610,6 +612,9 @@ private fun GlassIconButton(
     active: Boolean = false
 ) {
     val shape = CircleShape
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(if (pressed) 0.92f else 1f, animationSpec=tween(160), label="glass press")
     Box(
         Modifier.size(diameter)
             .shadow(12.dp, shape, clip = false)
@@ -630,7 +635,8 @@ private fun GlassIconButton(
                 ),
                 shape
             )
-            .clickable(onClick = onClick),
+             .graphicsLayer { scaleX=pressScale; scaleY=pressScale }
+            .clickable(interactionSource=interaction, indication=null, onClick=onClick),
         contentAlignment = Alignment.Center
     ) {
         Icon(
