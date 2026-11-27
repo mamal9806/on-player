@@ -624,6 +624,7 @@ fun PlayerScreen(
 
 }
 @Composable
+@Composable
 private fun GlassIconButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     description: String,
@@ -635,35 +636,37 @@ private fun GlassIconButton(
     val shape = CircleShape
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(if (pressed) 0.92f else 1f, animationSpec=tween(160), label="glass press")
+    val pressScale by animateFloatAsState(if (pressed) 0.94f else 1f, animationSpec=tween(160), label="glass press")
+    val lightFill = if (active) Color(0xFFEDE5FF) else Color(0xFFFFFFFF)
+    val lightEdge = if (active) Color(0xFFB9A0EE) else Color(0xFFD9DCE5)
     Box(
         Modifier.size(diameter)
-            .shadow(12.dp, shape, clip = false)
+            .shadow(if (isDark) 10.dp else 3.dp, shape, clip = false)
             .clip(shape)
             .background(
-                Brush.linearGradient(
+                if (isDark) Brush.linearGradient(
                     listOf(
-                        if (isDark) Color(0xFF272532).copy(alpha = if (active) 0.92f else 0.82f) else Color(0xFFFFFFFF).copy(alpha = 0.94f),
-                        if (isDark) Color(0xFF191821).copy(alpha = 0.88f) else Color(0xFFE5E6EC).copy(alpha = 0.88f),
-                        if (active) Color(0xFF9B65F5).copy(alpha = 0.32f) else if (isDark) Color(0xFF30303D) else Color(0xFFF4F4F7)
+                        Color(0xFF272532).copy(alpha = if (active) 0.92f else 0.82f),
+                        Color(0xFF191821).copy(alpha = 0.88f),
+                        if (active) Color(0xFF9B65F5).copy(alpha = 0.32f) else Color(0xFF30303D)
                     )
+                ) else Brush.verticalGradient(
+                    listOf(lightFill, if (active) Color(0xFFE3D7FA) else Color(0xFFF4F5F8))
                 )
             )
             .border(
                 1.dp,
-                Brush.linearGradient(
-                    listOf(if (isDark) Color.White.copy(alpha = 0.28f) else Color(0xFF8E929E).copy(alpha = 0.42f), if (isDark) Color.White.copy(alpha = 0.12f) else Color(0xFFBFC3D2).copy(alpha = 0.35f), if (isDark) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.82f))
-                ),
+                if (isDark) Brush.linearGradient(listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.12f))) else Brush.linearGradient(listOf(lightEdge, Color.White)),
                 shape
             )
-             .graphicsLayer { scaleX=pressScale; scaleY=pressScale }
+            .graphicsLayer { scaleX=pressScale; scaleY=pressScale }
             .clickable(interactionSource=interaction, indication=null, onClick=onClick),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             icon,
             contentDescription = description,
-            tint = if (active) Color(0xFFD6B8FF) else if (isDark) Color.White.copy(alpha = 0.94f) else Color(0xFF292B35),
+            tint = if (active) (if (isDark) Color(0xFFD6B8FF) else Color(0xFF6D43C5)) else if (isDark) Color.White.copy(alpha = 0.94f) else Color(0xFF30323B),
             modifier = Modifier.size(if (diameter >= 50.dp) 28.dp else 21.dp)
         )
     }
@@ -673,16 +676,16 @@ private fun GlassIconButton(
 private fun GlassPlayButton(playing: Boolean, accent: Color, isDark: Boolean, onClick: () -> Unit) {
     Box(
         Modifier.size(76.dp)
-            .shadow(if (isDark) 12.dp else 7.dp, CircleShape, clip = false)
+            .shadow(if (isDark) 12.dp else 4.dp, CircleShape, clip = false)
             .clip(CircleShape)
             .background(
                 Brush.linearGradient(
-                    if (isDark) listOf(accent.copy(alpha = 0.92f), accent.copy(alpha = 0.72f), Color(0xFF242230)) else listOf(accent.copy(alpha = 0.92f), accent.copy(alpha = 0.76f), Color(0xFFCCB7F2))
+                    if (isDark) listOf(accent.copy(alpha = 0.92f), accent.copy(alpha = 0.72f), Color(0xFF242230)) else listOf(accent.copy(alpha = 0.96f), accent.copy(alpha = 0.88f), accent.copy(alpha = 0.78f))
                 )
             )
             .border(
                 1.dp,
-                Brush.linearGradient(listOf(Color.White.copy(alpha = 0.70f), Color.White.copy(alpha = 0.12f))),
+                Brush.linearGradient(listOf(Color.White.copy(alpha = if (isDark) 0.70f else 0.55f), Color.White.copy(alpha = if (isDark) 0.12f else 0.32f))),
                 CircleShape
             )
             .clickable(onClick = onClick),
