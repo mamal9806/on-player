@@ -62,7 +62,7 @@ import com.onplayer.app.ui.UserPlaylist
 
 
 
-private fun playerTr(value: String): String = mapOf("Settings" to "تنظیمات","LANGUAGE" to "زبان","APPEARANCE" to "ظاهر","LIBRARY" to "کتابخانه","PLAYBACK" to "پخش","ABOUT" to "درباره","Dark" to "تیره","Light" to "روشن","System" to "سیستم","AMOLED Black" to "مشکی AMOLED","Music library" to "کتابخانه موسیقی","Rescan" to "اسکن مجدد","Favorites" to "علاقه‌مندی‌ها","Clear" to "پاک کردن","Audio focus" to "تمرکز صوتی","Your library" to "کتابخانه من","No favorites yet" to "هنوز آهنگ محبوبی ندارید","Pick a song" to "انتخاب آهنگ","Search music" to "جستجوی موسیقی","Song, artist or album" to "نام آهنگ، خواننده یا آلبوم","Recently added" to "اخیراً اضافه‌شده","See all" to "مشاهده همه","Choose music" to "انتخاب موسیقی","Your music awaits" to "موسیقی شما منتظر است","Choose a song to start listening." to "برای شروع، یک آهنگ انتخاب کنید","Now Playing" to "در حال پخش","Close player" to "بستن پخش‌کننده","More options" to "گزینه‌های بیشتر","Add to playlist" to "افزودن به فهرست پخش","Rename song" to "تغییر نام آهنگ","Delete from device" to "حذف از دستگاه","ON PLAYER" to "آن پلیر","Good music.\\nNo distractions." to "موسیقی خوب، بدون حواس‌پرتی.","Rescan music" to "اسکن دوباره موسیقی","Open file" to "باز کردن فایل","All songs" to "همه آهنگ‌ها","On Player requests Android audio focus when playback starts." to "آن پلیر هنگام شروع پخش، تمرکز صوتی را از اندروید دریافت می‌کند.","Version 1.0 • Music, beautifully simple" to "نسخه ۱٫۰ • موسیقی، ساده و زیبا","Clear favorites?" to "علاقه‌مندی‌ها پاک شوند؟","This removes all saved favorites from On Player." to "این کار همه آهنگ‌های ذخیره‌شده در آن پلیر را پاک می‌کند.","Cancel" to "لغو","Make it yours" to "شخصی‌سازی موسیقی","Create a playlist and collect your favorite tracks." to "فهرست پخش بساز و آهنگ‌های محبوبت را جمع کن.","Create playlist" to "ساخت فهرست پخش","Add songs" to "افزودن آهنگ‌ها","Delete playlist" to "حذف فهرست پخش","This playlist is empty. Add some music." to "این فهرست خالی است؛ چند آهنگ به آن اضافه کن.","New playlist" to "فهرست پخش جدید","Playlist name" to "نام فهرست پخش","e.g. Late night" to "مثلاً شبانه","Create" to "ساخت","Your library is empty." to "کتابخانه موسیقی خالی است.","Done" to "تمام","Home" to "خانه","Library" to "کتابخانه","Playlists" to "فهرست‌های پخش","Search" to "جستجو","Your playlists" to "فهرست‌های پخش شما","playlists saved on this device" to "فهرست پخش ذخیره‌شده","songs" to "آهنگ","tracks scanned" to "آهنگ بررسی‌شده","saved tracks" to "آهنگ ذخیره‌شده","Add music to" to "افزودن موسیقی به","Choose a song" to "یک آهنگ انتخاب کن","Back" to "بازگشت","You have no playlists yet. Create one to save this song." to "هنوز فهرست پخشی نداری؛ برای ذخیره آهنگ یکی بساز.","Rename in On Player" to "تغییر نام در آن پلیر","Song name" to "نام آهنگ","Save" to "ذخیره","Delete this song?" to "این آهنگ حذف شود؟","The audio file will be deleted from your device. Android may ask you to confirm this action." to "فایل صوتی از دستگاه حذف می‌شود. ممکن است اندروید تأیید بخواهد.","Delete" to "حذف").getOrDefault(value, value)
+private fun playerTr(value: String, language: String): String = if (language == "فارسی") mapOf("Settings" to "تنظیمات","LANGUAGE" to "زبان","APPEARANCE" to "ظاهر","LIBRARY" to "کتابخانه","PLAYBACK" to "پخش","ABOUT" to "درباره","Dark" to "تیره","Light" to "روشن","System" to "سیستم","AMOLED Black" to "مشکی AMOLED","Music library" to "کتابخانه موسیقی","Rescan" to "اسکن مجدد","Favorites" to "علاقه‌مندی‌ها","Clear" to "پاک کردن","Audio focus" to "تمرکز صوتی","Your library" to "کتابخانه من","No favorites yet" to "هنوز آهنگ محبوبی ندارید","Pick a song" to "انتخاب آهنگ","Search music" to "جستجوی موسیقی","Song, artist or album" to "نام آهنگ، خواننده یا آلبوم","Recently added" to "اخیراً اضافه‌شده","See all" to "مشاهده همه","Choose music" to "انتخاب موسیقی","Your music awaits" to "موسیقی شما منتظر است","Choose a song to start listening." to "برای شروع، یک آهنگ انتخاب کنید","Now Playing" to "در حال پخش","Close player" to "بستن پخش‌کننده","More options" to "گزینه‌های بیشتر","Add to playlist" to "افزودن به فهرست پخش","Rename song" to "تغییر نام آهنگ","Delete from device" to "حذف از دستگاه","ON PLAYER" to "آن پلیر","Good music.\\nNo distractions." to "موسیقی خوب، بدون حواس‌پرتی.","Rescan music" to "اسکن دوباره موسیقی","Open file" to "باز کردن فایل","All songs" to "همه آهنگ‌ها","On Player requests Android audio focus when playback starts." to "آن پلیر هنگام شروع پخش، تمرکز صوتی را از اندروید دریافت می‌کند.","Version 1.0 • Music, beautifully simple" to "نسخه ۱٫۰ • موسیقی، ساده و زیبا","Clear favorites?" to "علاقه‌مندی‌ها پاک شوند؟","This removes all saved favorites from On Player." to "این کار همه آهنگ‌های ذخیره‌شده در آن پلیر را پاک می‌کند.","Cancel" to "لغو","Make it yours" to "شخصی‌سازی موسیقی","Create a playlist and collect your favorite tracks." to "فهرست پخش بساز و آهنگ‌های محبوبت را جمع کن.","Create playlist" to "ساخت فهرست پخش","Add songs" to "افزودن آهنگ‌ها","Delete playlist" to "حذف فهرست پخش","This playlist is empty. Add some music." to "این فهرست خالی است؛ چند آهنگ به آن اضافه کن.","New playlist" to "فهرست پخش جدید","Playlist name" to "نام فهرست پخش","e.g. Late night" to "مثلاً شبانه","Create" to "ساخت","Your library is empty." to "کتابخانه موسیقی خالی است.","Done" to "تمام","Home" to "خانه","Library" to "کتابخانه","Playlists" to "فهرست‌های پخش","Search" to "جستجو","Your playlists" to "فهرست‌های پخش شما","playlists saved on this device" to "فهرست پخش ذخیره‌شده","songs" to "آهنگ","tracks scanned" to "آهنگ بررسی‌شده","saved tracks" to "آهنگ ذخیره‌شده","Add music to" to "افزودن موسیقی به","Choose a song" to "یک آهنگ انتخاب کن","Back" to "بازگشت","You have no playlists yet. Create one to save this song." to "هنوز فهرست پخشی نداری؛ برای ذخیره آهنگ یکی بساز.","Rename in On Player" to "تغییر نام در آن پلیر","Song name" to "نام آهنگ","Save" to "ذخیره","Delete this song?" to "این آهنگ حذف شود؟","The audio file will be deleted from your device. Android may ask you to confirm this action." to "فایل صوتی از دستگاه حذف می‌شود. ممکن است اندروید تأیید بخواهد.","Delete" to "حذف").getOrDefault(value, value) else value
 
 private fun extractArtworkAccent(bitmap: Bitmap?): Color {
     if (bitmap == null || bitmap.isRecycled) return Color(0xFF8B5CF6)
@@ -128,6 +128,7 @@ private fun rememberTrackArtwork(file: MediaFile): TrackArtwork {
 @Composable
 fun PlayerScreen(
     file: MediaFile?,
+    appLanguage: String,
     files: List<MediaFile>,
     vm: OnPlayerViewModel,
     player: MediaController?,
@@ -151,8 +152,8 @@ fun PlayerScreen(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Default.MusicNote, contentDescription = null, tint = accent, modifier = Modifier.size(58.dp))
-                Text(playerTr("Choose a song"), color = foreground, modifier = Modifier.padding(top = 12.dp))
-                TextButton(onClick = onBack) { Text(playerTr("Back")) }
+                Text(playerTr("Choose a song", appLanguage), color = foreground, modifier = Modifier.padding(top = 12.dp))
+                TextButton(onClick = onBack) { Text(playerTr("Back", appLanguage)) }
             }
         }
         return
@@ -251,10 +252,10 @@ fun PlayerScreen(
     if (showPlaylistPicker) {
         AlertDialog(
             onDismissRequest = { showPlaylistPicker = false },
-            title = { Text(playerTr("Add to playlist")) },
+            title = { Text(playerTr("Add to playlist", appLanguage)) },
             text = {
                 if (playlists.isEmpty()) {
-                    Text(playerTr("You have no playlists yet. Create one to save this song."))
+                    Text(playerTr("You have no playlists yet. Create one to save this song.", appLanguage))
                 } else {
                     Column(Modifier.heightIn(max = 360.dp)) {
                         playlists.forEach { playlist ->
@@ -272,7 +273,7 @@ fun PlayerScreen(
                                 Icon(Icons.Default.QueueMusic, null, tint = Color(0xFFFFA0B1))
                                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                                     Text(playlist.name, color = foreground, fontWeight = FontWeight.SemiBold)
-                                    Text(playlist.songUris.size.toString() + " آهنگ", color = secondary, fontSize = 11.sp)
+                                    Text(playlist.songUris.size.toString() + " " + playerTr("songs", appLanguage), color = secondary, fontSize = 11.sp)
                                 }
                                 Icon(
                                     if (alreadyAdded) Icons.Default.CheckCircle else Icons.Default.AddCircleOutline,
@@ -285,14 +286,14 @@ fun PlayerScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showPlaylistPicker = false }) { Text(playerTr("Done")) }
+                TextButton(onClick = { showPlaylistPicker = false }) { Text(playerTr("Done", appLanguage)) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     showPlaylistPicker = false
                     newPlaylistName = ""
                     showCreatePlaylist = true
-                }) { Text(playerTr("New playlist")) }
+                }) { Text(playerTr("New playlist", appLanguage)) }
             },
             containerColor = if (isDarkPlayer) Color(0xFF242033) else Color(0xFFF3F3F7),
             titleContentColor = foreground,
@@ -303,13 +304,13 @@ fun PlayerScreen(
     if (showCreatePlaylist) {
         AlertDialog(
             onDismissRequest = { showCreatePlaylist = false },
-            title = { Text(playerTr("Create playlist")) },
+            title = { Text(playerTr("Create playlist", appLanguage)) },
             text = {
                 OutlinedTextField(
                     value = newPlaylistName,
                     onValueChange = { newPlaylistName = it },
                     singleLine = true,
-                    label = { Text(playerTr("Playlist name")) }
+                    label = { Text(playerTr("Playlist name", appLanguage)) }
                 )
             },
             confirmButton = {
@@ -317,10 +318,10 @@ fun PlayerScreen(
                     val id = vm.createPlaylist(newPlaylistName)
                     if (id != null) onAddToPlaylist(id, file)
                     showCreatePlaylist = false
-                }) { Text(playerTr("Create")) }
+                }) { Text(playerTr("Create", appLanguage)) }
             },
             dismissButton = {
-                TextButton(onClick = { showCreatePlaylist = false }) { Text(playerTr("Cancel")) }
+                TextButton(onClick = { showCreatePlaylist = false }) { Text(playerTr("Cancel", appLanguage)) }
             },
             containerColor = Color(0xFF242033),
             titleContentColor = Color.White,
@@ -331,20 +332,20 @@ fun PlayerScreen(
     if (showRenameDialog) {
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
-            title = { Text(playerTr("Rename in On Player")) },
+            title = { Text(playerTr("Rename in On Player", appLanguage)) },
             text = {
                 OutlinedTextField(
                     value = renameText,
                     onValueChange = { renameText = it },
                     singleLine = true,
-                    label = { Text(playerTr("Song name")) }
+                    label = { Text(playerTr("Song name", appLanguage)) }
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
                     onRenameTrack(file, renameText)
                     showRenameDialog = false
-                }) { Text(playerTr("Save")) }
+                }) { Text(playerTr("Save", appLanguage)) }
             },
             dismissButton = {
                 TextButton(onClick = { showRenameDialog = false }) { Text(playerTr("Cancel")) }
@@ -358,13 +359,13 @@ fun PlayerScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text(playerTr("Delete this song?")) },
-            text = { Text(playerTr("The audio file will be deleted from your device. Android may ask you to confirm this action.")) },
+            title = { Text(playerTr("Delete this song?", appLanguage)) },
+            text = { Text(playerTr("The audio file will be deleted from your device. Android may ask you to confirm this action.", appLanguage)) },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
                     onDeleteTrack(file)
-                }) { Text(playerTr("Delete"), color = Color(0xFFFF8796)) }
+                }) { Text(playerTr("Delete", appLanguage), color = Color(0xFFFF8796)) }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) { Text(playerTr("Cancel")) }
@@ -412,8 +413,8 @@ fun PlayerScreen(
                     Modifier.weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(playerTr("ON PLAYER"), color = dynamicAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.4.sp)
-                    Text(playerTr("Now Playing"), color = secondary, fontSize = 12.sp)
+                    Text(playerTr("ON PLAYER", appLanguage), color = dynamicAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.4.sp)
+                    Text(playerTr("Now Playing", appLanguage), color = secondary, fontSize = 12.sp)
                 }
                 Box {
                     GlassIconButton(
@@ -609,7 +610,7 @@ fun PlayerScreen(
             ) {
                 Icon(Icons.Default.GraphicEq, contentDescription = null, tint = accent.copy(alpha = 0.85f), modifier = Modifier.size(17.dp))
                 Text(
-                    "  در حال پخش از کتابخانه شما",
+                    playerTr("  Playing from your library", appLanguage),
                     color = secondary.copy(alpha = 0.92f),
                     fontSize = 9.sp,
                     fontWeight = FontWeight.SemiBold,
