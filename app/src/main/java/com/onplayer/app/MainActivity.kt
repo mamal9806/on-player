@@ -357,8 +357,8 @@ private fun FeaturedTrack(file:MediaFile,playing:Boolean,dark:Boolean,onOpen:(Me
             Text(if(playing)"NOW PLAYING" else "LAST PLAYED",color=Purple,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=2.sp)
             Text(file.displayTitle,color=Color.White,fontSize=23.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
             Text(file.displayArtist,color=Color.White.copy(alpha=.75f),maxLines=1)
-            Box(Modifier.padding(top=12.dp).size(58.dp).graphicsLayer{rotationZ=if(playing)discRotation else 0f}.clip(CircleShape).background(Brush.radialGradient(listOf(Color(0xFFAAAAB2),Color(0xFF30313A),Color(0xFF090A12)))).border(1.dp,Color.White.copy(alpha=.3f),CircleShape),contentAlignment=Alignment.Center) {
-                artwork?.let { Image(it.asImageBitmap(),null,Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop) }
+            Box(Modifier.padding(top=12.dp).size(68.dp).graphicsLayer{rotationZ=if(playing)discRotation else 0f}.clip(CircleShape).background(Brush.radialGradient(listOf(Color(0xFFAAAAB2),Color(0xFF30313A),Color(0xFF090A12)))).border(1.dp,Color.White.copy(alpha=.3f),CircleShape),contentAlignment=Alignment.Center) {
+                artwork?.let { Image(it.asImageBitmap(),null,Modifier.size(30.dp).clip(CircleShape),contentScale=ContentScale.Crop) }
                 Box(Modifier.size(5.dp).clip(CircleShape).background(Color(0xFF08090D)))
             }
         }
