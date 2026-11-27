@@ -348,7 +348,7 @@ fun PlayerScreen(
                 }) { Text(playerTr("Save", appLanguage)) }
             },
             dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) { Text(playerTr("Cancel")) }
+                TextButton(onClick = { showRenameDialog = false }) { Text(playerTr("Cancel", appLanguage)) }
             },
             containerColor = Color(0xFF242033),
             titleContentColor = Color.White,
@@ -430,17 +430,17 @@ fun PlayerScreen(
                         containerColor = Color(0xFF242033)
                     ) {
                         DropdownMenuItem(
-                            text = { Text(playerTr("Add to playlist"), color = Color.White) },
+                            text = { Text(playerTr("Add to playlist", appLanguage), color = Color.White) },
                             leadingIcon = { Icon(Icons.Default.PlaylistAdd, null, tint = Color(0xFFD6B8FF)) },
                             onClick = { moreExpanded = false; showPlaylistPicker = true }
                         )
                         DropdownMenuItem(
-                            text = { Text(playerTr("Rename song"), color = Color.White) },
+                            text = { Text(playerTr("Rename song", appLanguage), color = Color.White) },
                             leadingIcon = { Icon(Icons.Default.Edit, null, tint = Color(0xFFD6B8FF)) },
                             onClick = { moreExpanded = false; renameText = file.displayTitle; showRenameDialog = true }
                         )
                         DropdownMenuItem(
-                            text = { Text(playerTr("Delete from device"), color = Color(0xFFFFA0AA)) },
+                            text = { Text(playerTr("Delete from device", appLanguage), color = Color(0xFFFFA0AA)) },
                             leadingIcon = { Icon(Icons.Default.DeleteOutline, null, tint = Color(0xFFFF8796)) },
                             onClick = { moreExpanded = false; showDeleteDialog = true }
                         )
@@ -610,7 +610,7 @@ fun PlayerScreen(
             ) {
                 Icon(Icons.Default.GraphicEq, contentDescription = null, tint = accent.copy(alpha = 0.85f), modifier = Modifier.size(17.dp))
                 Text(
-                    playerTr("  Playing from your library", appLanguage),
+                    playerTr("Playing from your library", appLanguage),
                     color = secondary.copy(alpha = 0.92f),
                     fontSize = 9.sp,
                     fontWeight = FontWeight.SemiBold,
