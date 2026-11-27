@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -77,6 +78,13 @@ private fun extractArtworkAccent(bitmap: Bitmap?): Color {
     }
     if (bestScore < 0f) return Color(0xFFE34B62)
     return Color(best).copy(alpha = 1f)
+}
+
+
+private fun artworkCompanion(primary: Color): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(primary.toArgb(), hsv)
+    return Color.hsv((hsv[0] + 34f) % 360f, (hsv[1] * 0.68f).coerceIn(0.25f, 0.65f), (hsv[2] * 1.10f).coerceIn(0.45f, 0.88f))
 }
 
 private data class TrackArtwork(val bitmap: Bitmap?, val title: String, val artist: String, val album: String)
@@ -158,8 +166,11 @@ fun PlayerScreen(
 
     val artwork = rememberTrackArtwork(file)
     val artworkAccent = remember(artwork.bitmap) { extractArtworkAccent(artwork.bitmap) }
-    val dynamicAccent by androidx.compose.animation.animateColorAsState(artworkAccent, animationSpec = tween(450), label = "cover accent")
-    val dynamicDeep = remember(dynamicAccent) { dynamicAccent.copy(red = dynamicAccent.red * 0.30f, green = dynamicAccent.green * 0.30f, blue = dynamicAccent.blue * 0.30f) }
+    val dynamicAccent by androidx.compose.animation.animateColorAsState(artworkAccent, animationSpec = tween(900), label = "cover accent")
+    val companionTarget = remember(artworkAccent) { artworkCompanion(artworkAccent) }
+    val dynamicCompanion by androidx.compose.animation.animateColorAsState(companionTarget, animationSpec = tween(1100), label = "companion accent")
+    val deepTarget = remember(dynamicAccent, dynamicCompanion) { Color(dynamicAccent.red * 0.30f + dynamicCompanion.red * 0.12f, dynamicAccent.green * 0.30f + dynamicCompanion.green * 0.12f, dynamicAccent.blue * 0.30f + dynamicCompanion.blue * 0.12f) }
+    val dynamicDeep by androidx.compose.animation.animateColorAsState(deepTarget, animationSpec = tween(1100), label = "deep background")
     val dynamicSoft = remember(dynamicAccent) { dynamicAccent.copy(alpha = 0.55f) }
     val favorites by vm.favorites.collectAsState()
     val isFavorite = file.uri.toString() in favorites
@@ -377,7 +388,7 @@ fun PlayerScreen(
         val ambientPulse = rememberInfiniteTransition(label = "ambient wallpaper")
             .animateFloat(0.22f, 0.38f, infiniteRepeatable(tween(3200), RepeatMode.Reverse), label = "ambient pulse").value
         Box(Modifier.fillMaxSize().background((if (isDarkPlayer) dynamicDeep else Color.White).copy(alpha = if (isDarkPlayer) ambientPulse else 0.30f)))
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(if (isDarkPlayer) listOf(dynamicDeep.copy(alpha = 0.36f), Color(0xFF10131C).copy(alpha = 0.70f), Color(0xFF050609).copy(alpha = 0.92f)) else listOf(Color.White.copy(alpha = 0.28f), Color(0xFFF4F4F8).copy(alpha = 0.78f), Color(0xFFF5F5F7).copy(alpha = 0.95f))))) {
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(if (isDarkPlayer) listOf(dynamicAccent.copy(alpha = 0.22f), dynamicCompanion.copy(alpha = 0.20f), dynamicDeep.copy(alpha = 0.55f), Color(0xFF10131C).copy(alpha = 0.72f), Color(0xFF050609).copy(alpha = 0.92f)) else listOf(dynamicAccent.copy(alpha = 0.10f), dynamicCompanion.copy(alpha = 0.08f), Color.White.copy(alpha = 0.65f), Color(0xFFF4F4F8).copy(alpha = 0.90f), Color(0xFFF5F5F7).copy(alpha = 0.96f))))) {
 
         Column(
             Modifier.fillMaxSize()
@@ -455,12 +466,12 @@ fun PlayerScreen(
             ) {
                 val discAura = rememberInfiniteTransition(label = "disc aura")
                     .animateFloat(0.12f, 0.26f, infiniteRepeatable(tween(2100), RepeatMode.Reverse), label = "aura opacity").value
-                Box(Modifier.fillMaxSize(0.76f).background(Brush.radialGradient(listOf(dynamicAccent.copy(alpha = discAura), dynamicAccent.copy(alpha = 0f), Color.Transparent))), contentAlignment = Alignment.Center) {}
+                Box(Modifier.fillMaxSize(0.76f).background(Brush.radialGradient(listOf(dynamicAccent.copy(alpha = discAura), dynamicCompanion.copy(alpha = discAura * 0.50f), dynamicAccent.copy(alpha = 0f), Color.Transparent))), contentAlignment = Alignment.Center) {}
                 Box(
                     Modifier.fillMaxHeight(0.88f).aspectRatio(1f)
                         .graphicsLayer { rotationZ = if (playing) discRotation else 0f }
                         .clip(CircleShape)
-                        .background(Brush.radialGradient(listOf(dynamicSoft, dynamicDeep, Color(0xFF08090D))))
+                        .background(Brush.radialGradient(listOf(dynamicCompanion.copy(alpha = 0.50f), dynamicSoft, dynamicDeep, Color(0xFF08090D))))
                         .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
