@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -128,13 +129,16 @@ fun PlayerScreen(
     onRenameTrack: (MediaFile, String) -> Unit,
     onDeleteTrack: (MediaFile) -> Unit
 ) {
-    val foreground = Color.White
-    val secondary = Color(0xFFD1C9E4)
+    val themeBackground = MaterialTheme.colorScheme.background
+    val isDarkPlayer = themeBackground.luminance() < 0.5f
+    val foreground = if (isDarkPlayer) Color.White else Color(0xFF20212A)
+    val secondary = if (isDarkPlayer) Color(0xFFD1C9E4) else Color(0xFF555967)
     val accent = MaterialTheme.colorScheme.primary
+    val glassTint = if (isDarkPlayer) Color.White else Color(0xFF20212A)
 
     if (file == null) {
         Box(
-            Modifier.fillMaxSize().background(Color(0xFF090A12)),
+            Modifier.fillMaxSize().background(if (isDarkPlayer) Color(0xFF090A12) else Color(0xFFF5F5F7)),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -256,8 +260,8 @@ fun PlayerScreen(
                             ) {
                                 Icon(Icons.Default.QueueMusic, null, tint = Color(0xFFFFA0B1))
                                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                                    Text(playlist.name, color = Color.White, fontWeight = FontWeight.SemiBold)
-                                    Text(playlist.songUris.size.toString() + " songs", color = Color(0xFFD1C9E4), fontSize = 11.sp)
+                                    Text(playlist.name, color = foreground, fontWeight = FontWeight.SemiBold)
+                                    Text(playlist.songUris.size.toString() + " آهنگ", color = secondary, fontSize = 11.sp)
                                 }
                                 Icon(
                                     if (alreadyAdded) Icons.Default.CheckCircle else Icons.Default.AddCircleOutline,
@@ -279,9 +283,9 @@ fun PlayerScreen(
                     showCreatePlaylist = true
                 }) { Text(playerTr("New playlist")) }
             },
-            containerColor = Color(0xFF242033),
-            titleContentColor = Color.White,
-            textContentColor = Color(0xFFD1C9E4)
+            containerColor = if (isDarkPlayer) Color(0xFF242033) else Color(0xFFF3F3F7),
+            titleContentColor = foreground,
+            textContentColor = secondary
         )
     }
 
@@ -366,14 +370,14 @@ fun PlayerScreen(
             Image(
                 bitmap.asImageBitmap(),
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize().blur(24.dp).graphicsLayer { scaleX = 1.22f; scaleY = 1.22f },
+                modifier = Modifier.fillMaxSize().blur(12.dp).graphicsLayer { scaleX = 1.08f; scaleY = 1.08f },
                 contentScale = ContentScale.Crop
             )
         }
         val ambientPulse = rememberInfiniteTransition(label = "ambient wallpaper")
             .animateFloat(0.22f, 0.38f, infiniteRepeatable(tween(3200), RepeatMode.Reverse), label = "ambient pulse").value
-        Box(Modifier.fillMaxSize().background(dynamicDeep.copy(alpha = ambientPulse)))
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(dynamicDeep.copy(alpha = 0.48f), Color(0xFF10131C).copy(alpha = 0.78f), Color(0xFF050609).copy(alpha = 0.96f))))) {
+        Box(Modifier.fillMaxSize().background((if (isDarkPlayer) dynamicDeep else Color.White).copy(alpha = if (isDarkPlayer) ambientPulse else 0.30f)))
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(if (isDarkPlayer) listOf(dynamicDeep.copy(alpha = 0.36f), Color(0xFF10131C).copy(alpha = 0.70f), Color(0xFF050609).copy(alpha = 0.92f)) else listOf(Color.White.copy(alpha = 0.28f), Color(0xFFF4F4F8).copy(alpha = 0.78f), Color(0xFFF5F5F7).copy(alpha = 0.95f))))) {
 
         Column(
             Modifier.fillMaxSize()
@@ -498,7 +502,7 @@ fun PlayerScreen(
                     )
                     Text(
                         listOf(artwork.artist, artwork.album).filter { it.isNotBlank() }.joinToString(" • "),
-                        color = secondary.copy(alpha = 0.84f),
+                        color = secondary.copy(alpha = 0.94f),
                         fontSize = 13.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -528,7 +532,7 @@ fun PlayerScreen(
                 Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 1.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(timeText(position), color = secondary.copy(alpha = 0.78f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                Text(timeText(position), color = secondary.copy(alpha = 0.95f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
                 Text(timeText(duration), color = secondary.copy(alpha = 0.78f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
             }
 
@@ -594,8 +598,8 @@ fun PlayerScreen(
             ) {
                 Icon(Icons.Default.GraphicEq, contentDescription = null, tint = accent.copy(alpha = 0.85f), modifier = Modifier.size(17.dp))
                 Text(
-                    "  PLAYING FROM YOUR LIBRARY",
-                    color = secondary.copy(alpha = 0.75f),
+                    "  در حال پخش از کتابخانه شما",
+                    color = secondary.copy(alpha = 0.92f),
                     fontSize = 9.sp,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 1.5.sp
@@ -645,7 +649,7 @@ private fun GlassIconButton(
         Icon(
             icon,
             contentDescription = description,
-            tint = if (active) Color(0xFFFF6B83) else Color.White.copy(alpha = 0.94f),
+            tint = if (active) Color(0xFFFF6B83) else if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color.White.copy(alpha = 0.94f) else Color(0xFF20212A),
             modifier = Modifier.size(if (diameter >= 50.dp) 28.dp else 21.dp)
         )
     }
@@ -659,7 +663,7 @@ private fun GlassPlayButton(playing: Boolean, accent: Color, onClick: () -> Unit
             .clip(CircleShape)
             .background(
                 Brush.linearGradient(
-                    listOf(Color.White.copy(alpha = 0.95f), accent.copy(alpha = 0.80f), accent)
+                    listOf(Color.White.copy(alpha = 0.96f), accent.copy(alpha = 0.65f), Color.White.copy(alpha = 0.30f))
                 )
             )
             .border(
@@ -678,7 +682,7 @@ private fun GlassPlayButton(playing: Boolean, accent: Color, onClick: () -> Unit
         Icon(
             if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
             contentDescription = if (playing) "Pause" else "Play",
-            tint = accent.copy(red = (accent.red * 0.28f).coerceIn(0f,1f), green = (accent.green * 0.28f).coerceIn(0f,1f), blue = (accent.blue * 0.28f).coerceIn(0f,1f)),
+            tint = if (accent.luminance() < 0.45f) Color.White else Color(0xFF171820),
             modifier = Modifier.size(39.dp)
         )
     }
