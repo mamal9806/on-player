@@ -641,16 +641,16 @@ private fun GlassIconButton(
             .background(
                 Brush.linearGradient(
                     listOf(
-                        Color.White.copy(alpha = if (active) 0.30f else 0.19f),
-                        Color.White.copy(alpha = 0.055f),
-                        Color(0xFF26243A).copy(alpha = 0.34f)
+                        Color.White.copy(alpha = if (active) 0.72f else 0.54f),
+                        Color.White.copy(alpha = 0.30f),
+                        if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF26243A).copy(alpha = 0.34f) else Color(0xFFE9EAF2).copy(alpha = 0.12f)
                     )
                 )
             )
             .border(
                 1.dp,
                 Brush.linearGradient(
-                    listOf(Color.White.copy(alpha = 0.62f), Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.28f))
+                    listOf(Color.White.copy(alpha = 0.76f), Color.White.copy(alpha = 0.30f), if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color.White.copy(alpha = 0.28f) else Color(0xFFBFC3D2).copy(alpha = 0.35f))
                 ),
                 shape
             )
