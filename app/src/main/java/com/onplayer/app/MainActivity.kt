@@ -39,6 +39,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,6 +70,9 @@ import kotlinx.coroutines.withContext
 import java.util.Locale
 
 private val Purple = Color(0xFF8B5CF6)
+private val LocalAppLanguage = compositionLocalOf { "English" }
+@Composable private fun tr(value: String): String = if (LocalAppLanguage.current == "فارسی") mapOf("Settings" to "تنظیمات","LANGUAGE" to "زبان","APPEARANCE" to "ظاهر","LIBRARY" to "کتابخانه","PLAYBACK" to "پخش","ABOUT" to "درباره","Dark" to "تیره","Light" to "روشن","System" to "سیستم","AMOLED Black" to "مشکی AMOLED","Music library" to "کتابخانه موسیقی","Rescan" to "اسکن مجدد","Favorites" to "علاقه‌مندی‌ها","Clear" to "پاک کردن","Audio focus" to "تمرکز صوتی","Your library" to "کتابخانه من","No favorites yet" to "هنوز آهنگ محبوبی ندارید","Pick a song" to "انتخاب آهنگ","Search music" to "جستجوی موسیقی","Song, artist or album" to "نام آهنگ، خواننده یا آلبوم","Recently added" to "اخیراً اضافه شده","See all" to "مشاهده همه","Choose music" to "انتخاب موسیقی","Your music awaits" to "موسیقی شما منتظر است","Choose a song to start listening." to "برای شروع یک آهنگ انتخاب کنید","Now Playing" to "در حال پخش","Close player" to "بستن پخش‌کننده","More options" to "گزینه‌های بیشتر","Add to playlist" to "افزودن به فهرست پخش","Rename song" to "تغییر نام آهنگ","Delete from device" to "حذف از دستگاه").getOrDefault(value, value) else value
+
 private val Deep = Color(0xFF090A12)
 private val CardDark = Color(0xFF151723)
 private val Subtle = Color(0xFF9B9BAF)
@@ -93,6 +98,8 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
     val lastPlayed by vm.lastPlayed.collectAsState()
     val playing by vm.isPlaying.collectAsState()
     val themeMode by vm.themeMode.collectAsState()
+    val languagePrefs = remember(context) { context.getSharedPreferences("on_player_settings", android.content.Context.MODE_PRIVATE) }
+    var appLanguage by remember { mutableStateOf(languagePrefs.getString("app_language", "English") ?: "English")
     var tab by remember { mutableStateOf(Tab.Home) }
     var playerOpen by remember { mutableStateOf(false) }
     var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
@@ -213,6 +220,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
     }
 
     MaterialTheme(colorScheme=colors) {
+        CompositionLocalProvider(LocalAppLanguage provides appLanguage) {
         if (playerOpen) {
             PlayerScreen(
                 file = current,
@@ -256,8 +264,8 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                                 val selected = tab == item
                                 Column(
                                     Modifier.weight(1f).clip(RoundedCornerShape(22.dp))
-                                        .background(if(selected) Purple.copy(alpha=if(dark)0.22f else 0.12f) else Color.Transparent)
-                                        .clickable { tab = item }
+                                         .background(if(selected) Brush.linearGradient(listOf(Purple.copy(alpha=0.25f),Color.White.copy(alpha=0.07f))) else Brush.linearGradient(listOf(Color.Transparent,Color.Transparent)))
+                                         .clickable { tab = item }
                                         .padding(vertical=6.dp),
                                     horizontalAlignment=Alignment.CenterHorizontally
                                 ) {
@@ -290,10 +298,11 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                         )
                         Tab.Favorites -> SongListTab("Favorites",files.filter{it.uri.toString() in favorites},scanning,null,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))},emptyText="No favorites yet")
                         Tab.Search -> SearchTab(files,favorites,dark,foreground,muted,onOpenSong={vm.open(it);playerOpen=true},onFavorite={vm.toggleFavorite(it)})
-                        Tab.Settings -> SettingsTab(themeMode,dark,foreground,muted,vm)
+                        Tab.Settings -> SettingsTab(themeMode,dark,foreground,muted,vm,onLanguageChanged={ appLanguage=it })
                     }
                 }
             }
+        }
         }
     }
 }
@@ -316,8 +325,8 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
         item {
             Row(verticalAlignment=Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("ON PLAYER",color=Purple,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=2.sp)
-                    Text("Good music.\nNo distractions.",color=fg,fontSize=28.sp,fontWeight=FontWeight.Bold,lineHeight=33.sp)
+                    Text(tr("ON PLAYER"),color=Purple,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=2.sp)
+                    Text(tr("Good music.\\nNo distractions."),color=fg,fontSize=28.sp,fontWeight=FontWeight.Bold,lineHeight=33.sp)
                 }
                 Box(Modifier.size(54.dp).clip(RoundedCornerShape(18.dp)).background(Brush.linearGradient(listOf(Color(0xFF754DCA),Color(0xFF252C5C)))),contentAlignment=Alignment.Center) { Icon(Icons.Default.Headphones,contentDescription=null,modifier=Modifier.size(28.dp),tint=Color.White) }
             }
@@ -326,9 +335,9 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
             last?.let { FeaturedTrack(it,playing,dark,onOpenSong) } ?: Card(shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=surface)) {
                 Column(Modifier.fillMaxWidth().padding(24.dp),horizontalAlignment=Alignment.Start) {
                     Icon(Icons.Default.MusicNote,contentDescription=null,tint=Purple,modifier=Modifier.size(42.dp))
-                    Text("Your music awaits",color=fg,fontSize=20.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp))
-                    Text("Choose a song to start listening.",color=muted)
-                    Button(onClick=onPick,modifier=Modifier.padding(top=14.dp)) { Icon(Icons.Default.FolderOpen,null); Spacer(Modifier.width(6.dp)); Text("Choose music") }
+                    Text(tr("Your music awaits"),color=fg,fontSize=20.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp))
+                    Text(tr("Choose a song to start listening."),color=muted)
+                    Button(onClick=onPick,modifier=Modifier.padding(top=14.dp)) { Icon(Icons.Default.FolderOpen,null); Spacer(Modifier.width(6.dp)); Text(tr("Choose music")) }
                 }
             }
         }
@@ -338,11 +347,11 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
                 QuickAction("Recently added",files.take(12).size,Icons.Default.History,Modifier.weight(1f),dark,fg,onLibrary)
             }
         }
-        item { Row(verticalAlignment=Alignment.CenterVertically) { Text("Recently added",color=fg,fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f)); Text("See all",color=Purple,modifier=Modifier.clickable(onClick=onLibrary)) } }
+        item { Row(verticalAlignment=Alignment.CenterVertically) { Text(tr("Recently added"),color=fg,fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f)); Text(tr("See all"),color=Purple,modifier=Modifier.clickable(onClick=onLibrary)) } }
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         if (error!=null) item { Text(error,color=muted) }
         items(files.take(12),key={it.uri.toString()}) { song -> SongRow(song,dark,fg,muted,onClick={onOpenSong(song)}) }
-        item { OutlinedButton(onClick=onRefresh,modifier=Modifier.fillMaxWidth()) { Icon(Icons.Default.Refresh,null);Spacer(Modifier.width(6.dp));Text("Rescan music") } }
+        item { OutlinedButton(onClick=onRefresh,modifier=Modifier.fillMaxWidth()) { Icon(Icons.Default.Refresh,null);Spacer(Modifier.width(6.dp));Text(tr("Rescan music")) } }
     }
 }
 
@@ -379,11 +388,11 @@ private fun SongListTab(title:String,songs:List<MediaFile>,loading:Boolean,error
         if(loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         if(error!=null) Text(error,color=muted,modifier=Modifier.padding(bottom=8.dp))
         if(songs.isEmpty()) {
-            Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) { Column(horizontalAlignment=Alignment.CenterHorizontally) { Icon(Icons.Default.MusicNote,contentDescription=null,tint=Purple,modifier=Modifier.size(48.dp)); Text(emptyText,color=muted,modifier=Modifier.padding(top=12.dp)); Button(onClick=onPick,modifier=Modifier.padding(top=12.dp)){Text("Pick a song")} } }
+            Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) { Column(horizontalAlignment=Alignment.CenterHorizontally) { Icon(Icons.Default.MusicNote,contentDescription=null,tint=Purple,modifier=Modifier.size(48.dp)); Text(emptyText,color=muted,modifier=Modifier.padding(top=12.dp)); Button(onClick=onPick,modifier=Modifier.padding(top=12.dp)){Text(tr("Pick a song"))} } }
         } else LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { items(songs,key={it.uri.toString()}) { SongRow(it,dark,fg,muted,onClick={onOpenSong(it)}) } }
         Row(Modifier.fillMaxWidth().padding(vertical=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick=onRefresh,modifier=Modifier.weight(1f)) { Icon(Icons.Default.Refresh,null);Spacer(Modifier.width(4.dp));Text("Rescan") }
-            Button(onClick=onPick,modifier=Modifier.weight(1f)) { Icon(Icons.Default.FolderOpen,null);Spacer(Modifier.width(4.dp));Text("Open file") }
+            OutlinedButton(onClick=onRefresh,modifier=Modifier.weight(1f)) { Icon(Icons.Default.Refresh,null);Spacer(Modifier.width(4.dp));Text(tr("Rescan")) }
+            Button(onClick=onPick,modifier=Modifier.weight(1f)) { Icon(Icons.Default.FolderOpen,null);Spacer(Modifier.width(4.dp));Text(tr("Open file")) }
         }
     }
 }
@@ -393,8 +402,8 @@ private fun SearchTab(files:List<MediaFile>,favorites:Set<String>,dark:Boolean,f
     var query by remember{mutableStateOf("")}
     val filtered=remember(files,query){files.filter{it.displayTitle.contains(query,true)||it.displayArtist.contains(query,true)||it.displayAlbum.contains(query,true)}}
     Column(Modifier.fillMaxSize().padding(horizontal=18.dp)) {
-        Text("Search music",color=fg,fontSize=27.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=24.dp,bottom=12.dp))
-        OutlinedTextField(value=query,onValueChange={query=it},modifier=Modifier.fillMaxWidth(),placeholder={Text("Song, artist or album")},leadingIcon={Icon(Icons.Default.Search,null)},trailingIcon={if(query.isNotEmpty()) IconButton(onClick={query=""}){Icon(Icons.Default.Clear,null)}},singleLine=true,shape=RoundedCornerShape(18.dp))
+        Text(tr("Search music"),color=fg,fontSize=27.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=24.dp,bottom=12.dp))
+        OutlinedTextField(value=query,onValueChange={query=it},modifier=Modifier.fillMaxWidth(),placeholder={Text(tr("Song, artist or album"))},leadingIcon={Icon(Icons.Default.Search,null)},trailingIcon={if(query.isNotEmpty()) IconButton(onClick={query=""}){Icon(Icons.Default.Clear,null)}},singleLine=true,shape=RoundedCornerShape(18.dp))
         LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(vertical=14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { items(filtered,key={it.uri.toString()}) { SongRow(it,dark,fg,muted,onClick={onOpenSong(it)},favorite=it.uri.toString() in favorites,onFavorite={onFavorite(it)}) } }
     }
 }
@@ -444,7 +453,7 @@ private fun formatMiniTime(ms:Long):String {
 }
 
 @Composable
-private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlayerViewModel) {
+private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlayerViewModel,onLanguageChanged:(String)->Unit) {
     val files by vm.files.collectAsState()
     val favorites by vm.favorites.collectAsState()
     var confirmClearFavorites by remember { mutableStateOf(false) }
@@ -452,14 +461,15 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
     val prefs = remember(context) { context.getSharedPreferences("on_player_settings", android.content.Context.MODE_PRIVATE) }
     var appLanguage by remember { mutableStateOf(prefs.getString("app_language", "English") ?: "English") }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal=20.dp)) {
-        Text("Settings",color=fg,fontSize=30.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=24.dp,bottom=20.dp))
-        Text("LANGUAGE",color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp)
+        Text(tr("Settings"),color=fg,fontSize=30.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=24.dp,bottom=20.dp))
+        Text(tr("LANGUAGE"),color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp)
         Card(Modifier.fillMaxWidth().padding(top=10.dp),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=if(dark) CardDark else Color.White)) {
             Column(Modifier.padding(16.dp)) {
                 listOf("English","فارسی").forEach { language ->
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable {
                         appLanguage = language
                         prefs.edit().putString("app_language", language).apply()
+                        onLanguageChanged(language)
                     }.padding(vertical=13.dp,horizontal=4.dp), verticalAlignment=Alignment.CenterVertically) {
                         Icon(Icons.Default.Language,null,tint=Purple)
                         Text(language, color=fg, modifier=Modifier.weight(1f).padding(start=12.dp))
@@ -468,7 +478,7 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
                 }
             }
         }
-        Text("APPEARANCE",color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp,modifier=Modifier.padding(top=22.dp))
+        Text(tr("APPEARANCE"),color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp,modifier=Modifier.padding(top=22.dp))
         Card(
             Modifier.fillMaxWidth().padding(top=10.dp),
             shape=RoundedCornerShape(24.dp),
@@ -491,7 +501,7 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
                 }
             }
         }
-        Text("LIBRARY",color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp,modifier=Modifier.padding(top=24.dp))
+        Text(tr("LIBRARY"),color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp,modifier=Modifier.padding(top=24.dp))
         Card(
             Modifier.fillMaxWidth().padding(top=10.dp),
             shape=RoundedCornerShape(24.dp),
@@ -501,23 +511,23 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
                 Row(verticalAlignment=Alignment.CenterVertically) {
                     Icon(Icons.Default.LibraryMusic,null,tint=Purple)
                     Column(Modifier.weight(1f).padding(start=12.dp)) {
-                        Text("Music library",color=fg,fontWeight=FontWeight.SemiBold)
+                        Text(tr("Music library"),color=fg,fontWeight=FontWeight.SemiBold)
                         Text(files.size.toString()+" tracks scanned",color=muted,fontSize=12.sp)
                     }
-                    TextButton(onClick={vm.scan()}) { Text("Rescan") }
+                    TextButton(onClick={vm.scan()}) { Text(tr("Rescan")) }
                 }
                 HorizontalDivider(color=muted.copy(alpha=0.18f))
                 Row(verticalAlignment=Alignment.CenterVertically,modifier=Modifier.padding(top=12.dp)) {
                     Icon(Icons.Default.Favorite,null,tint=Color(0xFFEA79A8))
                     Column(Modifier.weight(1f).padding(start=12.dp)) {
-                        Text("Favorites",color=fg,fontWeight=FontWeight.SemiBold)
+                        Text(tr("Favorites"),color=fg,fontWeight=FontWeight.SemiBold)
                         Text(favorites.size.toString()+" saved tracks",color=muted,fontSize=12.sp)
                     }
-                    TextButton(onClick={confirmClearFavorites=true},enabled=favorites.isNotEmpty()) { Text("Clear") }
+                    TextButton(onClick={confirmClearFavorites=true},enabled=favorites.isNotEmpty()) { Text(tr("Clear")) }
                 }
             }
         }
-        Text("PLAYBACK",color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp,modifier=Modifier.padding(top=24.dp))
+        Text(tr("PLAYBACK"),color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp,modifier=Modifier.padding(top=24.dp))
         Card(
             Modifier.fillMaxWidth().padding(top=10.dp),
             shape=RoundedCornerShape(24.dp),
@@ -526,13 +536,13 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
             Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically) {
                 Icon(Icons.Default.GraphicEq,null,tint=Purple)
                 Column(Modifier.weight(1f).padding(start=12.dp)) {
-                    Text("Audio focus",color=fg,fontWeight=FontWeight.SemiBold)
-                    Text("On Player requests Android audio focus when playback starts.",color=muted,fontSize=12.sp)
+                    Text(tr("Audio focus"),color=fg,fontWeight=FontWeight.SemiBold)
+                    Text(tr("On Player requests Android audio focus when playback starts."),color=muted,fontSize=12.sp)
                 }
                 Icon(Icons.Default.CheckCircle,contentDescription="Enabled",tint=Color(0xFF69C99B))
             }
         }
-        Text("ABOUT",color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp,modifier=Modifier.padding(top=24.dp))
+        Text(tr("ABOUT"),color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp,modifier=Modifier.padding(top=24.dp))
         Card(
             Modifier.fillMaxWidth().padding(top=10.dp,bottom=28.dp),
             shape=RoundedCornerShape(24.dp),
@@ -544,8 +554,8 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
                         Icon(Icons.Default.Headphones,null,tint=Color.White,modifier=Modifier.size(25.dp))
                     }
                     Column(Modifier.weight(1f).padding(start=12.dp)) {
-                        Text("On Player",color=fg,fontWeight=FontWeight.Bold,fontSize=17.sp)
-                        Text("Version 1.0 • Music, beautifully simple",color=muted,fontSize=12.sp)
+                        Text(tr("On Player"),color=fg,fontWeight=FontWeight.Bold,fontSize=17.sp)
+                        Text(tr("Version 1.0 • Music, beautifully simple"),color=muted,fontSize=12.sp)
                     }
                 }
                 Text(
@@ -596,10 +606,10 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
     if(confirmClearFavorites) {
         AlertDialog(
             onDismissRequest={confirmClearFavorites=false},
-            title={Text("Clear favorites?")},
-            text={Text("This removes all saved favorites from On Player.")},
-            confirmButton={TextButton(onClick={vm.clearFavorites();confirmClearFavorites=false}){Text("Clear")}},
-            dismissButton={TextButton(onClick={confirmClearFavorites=false}){Text("Cancel")}}
+            title={Text(tr("Clear favorites?"))},
+            text={Text(tr("This removes all saved favorites from On Player."))},
+            confirmButton={TextButton(onClick={vm.clearFavorites();confirmClearFavorites=false}){Text(tr("Clear"))}},
+            dismissButton={TextButton(onClick={confirmClearFavorites=false}){Text(tr("Cancel"))}}
         )
     }
 }
@@ -651,10 +661,10 @@ private fun PlaylistsTab(
                 Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) {
                     Column(horizontalAlignment=Alignment.CenterHorizontally) {
                         Icon(Icons.Default.QueueMusic,null,tint=Purple,modifier=Modifier.size(58.dp))
-                        Text("Make it yours",color=fg,fontSize=20.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=14.dp))
-                        Text("Create a playlist and collect your favorite tracks.",color=muted,fontSize=13.sp)
+                        Text(tr("Make it yours"),color=fg,fontSize=20.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=14.dp))
+                        Text(tr("Create a playlist and collect your favorite tracks."),color=muted,fontSize=13.sp)
                         Button(onClick={newName="";showCreate=true},modifier=Modifier.padding(top=16.dp)) {
-                            Icon(Icons.Default.Add,null);Spacer(Modifier.width(6.dp));Text("Create playlist")
+                            Icon(Icons.Default.Add,null);Spacer(Modifier.width(6.dp));Text(tr("Create playlist"))
                         }
                     }
                 }
@@ -683,16 +693,16 @@ private fun PlaylistsTab(
         } else {
             Row(Modifier.fillMaxWidth().padding(bottom=10.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 Button(onClick={showAddSongs=true},modifier=Modifier.weight(1f)) {
-                    Icon(Icons.Default.Add,null);Spacer(Modifier.width(6.dp));Text("Add songs")
+                    Icon(Icons.Default.Add,null);Spacer(Modifier.width(6.dp));Text(tr("Add songs"))
                 }
                 OutlinedButton(onClick={onDelete(selected.id)}) {
-                    Icon(Icons.Default.DeleteOutline,null);Spacer(Modifier.width(5.dp));Text("Delete playlist")
+                    Icon(Icons.Default.DeleteOutline,null);Spacer(Modifier.width(5.dp));Text(tr("Delete playlist"))
                 }
             }
             val songs = selected.songUris.mapNotNull { uri -> files.firstOrNull { it.uri.toString() == uri } }
             if(songs.isEmpty()) {
                 Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) {
-                    Text("This playlist is empty. Add some music.",color=muted)
+                    Text(tr("This playlist is empty. Add some music."),color=muted)
                 }
             } else {
                 LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -716,17 +726,17 @@ private fun PlaylistsTab(
     if(showCreate) {
         AlertDialog(
             onDismissRequest={showCreate=false},
-            title={Text("New playlist")},
+            title={Text(tr("New playlist"))},
             text={
                 OutlinedTextField(
                     value=newName,onValueChange={newName=it},singleLine=true,
-                    label={Text("Playlist name")},placeholder={Text("e.g. Late night")}
+                    label={Text(tr("Playlist name"))},placeholder={Text(tr("e.g. Late night"))}
                 )
             },
             confirmButton={
-                TextButton(onClick={if(newName.isNotBlank()){onCreate(newName);showCreate=false}}) { Text("Create") }
+                TextButton(onClick={if(newName.isNotBlank()){onCreate(newName);showCreate=false}}) { Text(tr("Create")) }
             },
-            dismissButton={TextButton(onClick={showCreate=false}){Text("Cancel")}}
+            dismissButton={TextButton(onClick={showCreate=false}){Text(tr("Cancel"))}}
         )
     }
     if(showAddSongs && selected != null) {
@@ -734,7 +744,7 @@ private fun PlaylistsTab(
             onDismissRequest={showAddSongs=false},
             title={Text("Add music to " + selected.name)},
             text={
-                if(files.isEmpty()) Text("Your library is empty.")
+                if(files.isEmpty()) Text(tr("Your library is empty."))
                 else LazyColumn(Modifier.heightIn(max=420.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
                     items(files,key={it.uri.toString()}) { song ->
                         val alreadyAdded = song.uri.toString() in selected.songUris
@@ -757,7 +767,7 @@ private fun PlaylistsTab(
                     }
                 }
             },
-            confirmButton={TextButton(onClick={showAddSongs=false}){Text("Done")}}
+            confirmButton={TextButton(onClick={showAddSongs=false}){Text(tr("Done"))}}
         )
     }
 }
