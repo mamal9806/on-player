@@ -418,9 +418,8 @@ fun PlayerScreen(
                 contentScale = ContentScale.Crop
             )
         }
-        val ambientPulse = rememberInfiniteTransition(label = "ambient wallpaper")
-            .animateFloat(0.22f, 0.38f, infiniteRepeatable(tween(3200), RepeatMode.Reverse), label = "ambient pulse").value
-        Box(Modifier.fillMaxSize().background(if (isDarkPlayer) dynamicDeep.copy(alpha = ambientPulse) else lerp(Color(0xFFF8F8FC), dynamicAccent, 0.12f).copy(alpha = 0.72f)))
+        val ambientTintAlpha = 0.30f
+        Box(Modifier.fillMaxSize().background(if (isDarkPlayer) dynamicDeep.copy(alpha = ambientTintAlpha) else lerp(Color(0xFFF8F8FC), dynamicAccent, 0.12f).copy(alpha = 0.72f)))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(if (isDarkPlayer) listOf(dynamicAccent.copy(alpha = 0.18f), dynamicCompanion.copy(alpha = 0.14f), dynamicDeep.copy(alpha = 0.52f), Color(0xFF10131C).copy(alpha = 0.80f), Color(0xFF050609)) else listOf(dynamicAccent.copy(alpha = 0.20f), dynamicCompanion.copy(alpha = 0.13f), Color(0xFFFFF8FC).copy(alpha = 0.34f), Color(0xFFF8F8FC).copy(alpha = 0.52f), Color(0xFFF1F2F7).copy(alpha = 0.62f))))) {
 
         Column(
@@ -504,8 +503,7 @@ fun PlayerScreen(
                     },
                 contentAlignment = Alignment.Center
             ) {
-                val discAura = rememberInfiniteTransition(label = "disc aura")
-                    .animateFloat(0.12f, 0.26f, infiniteRepeatable(tween(2100), RepeatMode.Reverse), label = "aura opacity").value
+                val discAura = 0.16f
                 Box(Modifier.fillMaxSize(0.76f).background(Brush.radialGradient(listOf(dynamicAccent.copy(alpha = discAura), dynamicCompanion.copy(alpha = discAura * 0.50f), dynamicAccent.copy(alpha = 0f), Color.Transparent))), contentAlignment = Alignment.Center) {}
                 Box(
                     Modifier.fillMaxHeight(0.88f).aspectRatio(1f)
