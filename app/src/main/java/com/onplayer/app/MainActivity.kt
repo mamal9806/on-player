@@ -381,6 +381,16 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
 }
 
 @Composable
+
+@Composable
+private fun GlassCardColors(dark:Boolean, accent:Color):CardColors = CardDefaults.cardColors(containerColor=if(dark) Color(0xB91B1B27) else Color(0xCFFFFFFF))
+
+private fun Modifier.roundGlass(dark:Boolean,accent:Color,shape:RoundedCornerShape=RoundedCornerShape(24.dp)):Modifier = this
+    .clip(shape)
+    .background(if(dark) Brush.linearGradient(listOf(Color.White.copy(alpha=0.075f),accent.copy(alpha=0.045f),Color(0xFF14141F).copy(alpha=0.92f))) else Brush.linearGradient(listOf(Color.White.copy(alpha=0.94f),accent.copy(alpha=0.06f),Color(0xFFF4F5FA).copy(alpha=0.92f))))
+    .border(1.dp,if(dark) Brush.linearGradient(listOf(Color.White.copy(alpha=0.19f),accent.copy(alpha=0.20f),Color.White.copy(alpha=0.07f))) else Brush.linearGradient(listOf(Color.White.copy(alpha=0.96f),accent.copy(alpha=0.18f),Color(0xFFD6DCE8)),),shape)
+
+@Composable
 private fun FeaturedTrack(file:MediaFile,playing:Boolean,dark:Boolean,accent:Color,controller:MediaController?,onOpen:(MediaFile)->Unit,onOpenCard:(MediaFile)->Unit) {
     val artwork by rememberArtwork(file.uri)
     val discRotation=rememberInfiniteTransition(label="featured disc").animateFloat(initialValue=0f,targetValue=360f,animationSpec=infiniteRepeatable(tween(12000,easing=androidx.compose.animation.core.LinearEasing)),label="rotation").value
@@ -407,7 +417,7 @@ private fun FeaturedTrack(file:MediaFile,playing:Boolean,dark:Boolean,accent:Col
 
 @Composable
 private fun QuickAction(title:String,count:Int,icon:androidx.compose.ui.graphics.vector.ImageVector,modifier:Modifier,dark:Boolean,fg:Color,accent:Color,onClick:()->Unit) {
-    Card(modifier.clickable(onClick=onClick),shape=RoundedCornerShape(22.dp),colors=CardDefaults.cardColors(containerColor=if(dark)CardDark else Color.White)) {
+    Card(modifier.clickable(onClick=onClick).roundGlass(dark,accent,RoundedCornerShape(22.dp)),shape=RoundedCornerShape(22.dp),colors=CardDefaults.cardColors(containerColor=Color.Transparent)) {
         Column(Modifier.padding(16.dp)) { Icon(icon,contentDescription=null,tint=accent,modifier=Modifier.size(23.dp)); Text(count.toString(),color=fg,fontSize=25.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp)); Text(title,color=Subtle,fontSize=12.sp) }
     }
 }
@@ -450,7 +460,7 @@ private fun SearchTab(files:List<MediaFile>,favorites:Set<String>,dark:Boolean,f
 @Composable
 private fun SongRow(file:MediaFile,dark:Boolean,fg:Color,muted:Color,onClick:()->Unit,favorite:Boolean=false,onFavorite:()->Unit={}) {
     val art by rememberArtwork(file.uri)
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(if(dark)CardDark else Color.White).clickable(onClick=onClick).padding(10.dp),verticalAlignment=Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().roundGlass(dark,Purple,RoundedCornerShape(20.dp)).clickable(onClick=onClick).padding(10.dp),verticalAlignment=Alignment.CenterVertically) {
         Box(Modifier.size(54.dp).clip(RoundedCornerShape(15.dp)).background(Brush.linearGradient(listOf(Color(0xFF6747AD),Color(0xFF1D355E)))),contentAlignment=Alignment.Center) { if(art!=null) Image(art!!.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop) else Icon(Icons.Default.MusicNote,contentDescription=null,tint=Color.White) }
         Column(Modifier.weight(1f).padding(horizontal=12.dp)) { Text(file.displayTitle,color=fg,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis);Text(file.displayArtist,color=muted,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis) }
         if(favorite) IconButton(onClick=onFavorite) { Icon(Icons.Default.Favorite,contentDescription="Remove favorite",tint=Color(0xFFEE79A8)) }
@@ -470,7 +480,7 @@ private fun MiniPlayer(file:MediaFile,playing:Boolean,dark:Boolean,controller:Me
             kotlinx.coroutines.delay(if (playing) 500L else 1000L)
         }
     }
-    Column(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=5.dp).clip(RoundedCornerShape(17.dp)).background(if(dark)Color(0xFF242330)else Color(0xFFF0EDFA))) {
+    Column(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=5.dp).roundGlass(dark,Purple,RoundedCornerShape(17.dp))) {
       Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=10.dp,vertical=7.dp),verticalAlignment=Alignment.CenterVertically) {
         Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Purple),contentAlignment=Alignment.Center) { if(art!=null)Image(art!!.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)else Icon(Icons.Default.MusicNote,null,tint=Color.White) }
         Column(Modifier.weight(1f).padding(horizontal=10.dp)) { Text(file.displayTitle,color=if(dark)Color.White else Color(0xFF20202A),fontWeight=FontWeight.SemiBold,maxLines=1);Text(file.displayArtist,color=Subtle,fontSize=11.sp,maxLines=1) }
@@ -503,7 +513,7 @@ private fun SettingsTab(theme:String,dark:Boolean,fg:Color,muted:Color,vm:OnPlay
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal=20.dp)) {
         Text(tr("Settings"),color=fg,fontSize=30.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=24.dp,bottom=20.dp))
         Text(tr("LANGUAGE"),color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.6.sp)
-        Card(Modifier.fillMaxWidth().padding(top=10.dp),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=if(dark) CardDark else Color.White)) {
+        Card(Modifier.fillMaxWidth().roundGlass(dark,Purple).padding(top=10.dp),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=if(dark) CardDark else Color.White)) {
             Column(Modifier.padding(16.dp)) {
                 listOf("English","فارسی").forEach { language ->
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable {
