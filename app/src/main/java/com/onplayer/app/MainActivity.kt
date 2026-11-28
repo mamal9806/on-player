@@ -19,6 +19,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -292,27 +298,36 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                     }
                 }
             ) { padding ->
-                Box(Modifier.fillMaxSize().padding(padding)) {
-                    when(tab) {
-                        Tab.Home -> HomeTab(files, lastPlayed, playing, scanning, scanError, dark, foreground, muted, surface, accent, controller, onRefresh={vm.scan()}, onPick={audioPicker.launch(arrayOf("audio/*"))}, onOpenSong={vm.open(it);playerOpen=true}, onLibrary={tab=Tab.Library})
-                        Tab.Library -> SongListTab(tr("Your library"),files,scanning,scanError,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))},searchable=true)
-                        Tab.Playlists -> PlaylistsTab(
-                            playlists = playlists,
-                            files = files,
-                            selectedPlaylistId = selectedPlaylistId,
-                            dark = dark,
-                            fg = foreground,
-                            muted = muted,
-                            onSelect = { selectedPlaylistId = it },
-                            onBack = { selectedPlaylistId = null },
-                            onCreate = { vm.createPlaylist(it) },
-                            onDelete = { vm.deletePlaylist(it) },
-                            onAddSong = { id, song -> vm.addToPlaylist(id, song) },
-                            onRemoveSong = { id, song -> vm.removeFromPlaylist(id, song) },
-                            onOpenSong = { vm.open(it); playerOpen = true }
-                        )
-                        Tab.Favorites -> SongListTab(tr("Favorites"),files.filter{it.uri.toString() in favorites},scanning,null,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))},emptyText="No favorites yet")
-                        Tab.Settings -> SettingsTab(themeMode,dark,foreground,muted,vm,onLanguageChanged={ appLanguage=it })
+                AnimatedContent(
+                    targetState = tab,
+                    transitionSpec = {
+                        (fadeIn(tween(180)) + slideInHorizontally(initialOffsetX = { it / 7 })) togetherWith
+                            (fadeOut(tween(120)) + slideOutHorizontally(targetOffsetX = { -it / 10 }))
+                    },
+                    label = "page transition"
+                ) { activeTab ->
+                    Box(Modifier.fillMaxSize()) {
+                        when(activeTab) {
+                            Tab.Home -> HomeTab(files, lastPlayed, playing, scanning, scanError, dark, foreground, muted, surface, accent, controller, onRefresh={vm.scan()}, onPick={audioPicker.launch(arrayOf("audio/*"))}, onOpenSong={vm.open(it);playerOpen=true}, onLibrary={tab=Tab.Library})
+                            Tab.Library -> SongListTab(tr("Your library"),files,scanning,scanError,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))},searchable=true)
+                            Tab.Playlists -> PlaylistsTab(
+                                playlists = playlists,
+                                files = files,
+                                selectedPlaylistId = selectedPlaylistId,
+                                dark = dark,
+                                fg = foreground,
+                                muted = muted,
+                                onSelect = { selectedPlaylistId = it },
+                                onBack = { selectedPlaylistId = null },
+                                onCreate = { vm.createPlaylist(it) },
+                                onDelete = { vm.deletePlaylist(it) },
+                                onAddSong = { id, song -> vm.addToPlaylist(id, song) },
+                                onRemoveSong = { id, song -> vm.removeFromPlaylist(id, song) },
+                                onOpenSong = { vm.open(it); playerOpen = true }
+                            )
+                            Tab.Favorites -> SongListTab(tr("Favorites"),files.filter{it.uri.toString() in favorites},scanning,null,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))},emptyText="No favorites yet")
+                            Tab.Settings -> SettingsTab(themeMode,dark,foreground,muted,vm,onLanguageChanged={ appLanguage=it })
+                        }
                     }
                 }
             }
@@ -340,7 +355,7 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
         homeArtwork?.let { art ->
             Image(
                 art.asImageBitmap(), contentDescription=null,
-                modifier=Modifier.fillMaxSize().blur(34.dp).graphicsLayer { scaleX=1.12f; scaleY=1.12f; alpha=if(dark)0.22f else 0.24f },
+                modifier=Modifier.fillMaxSize().blur(8.dp).graphicsLayer { scaleX=1.12f; scaleY=1.12f; alpha=if(dark)0.22f else 0.24f },
                 contentScale=ContentScale.Crop
             )
         }
