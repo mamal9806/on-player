@@ -479,6 +479,11 @@ fun PlayerScreen(
 
             Spacer(Modifier.weight(0.14f))
 
+            val tumbleProgress = remember(file.uri) { androidx.compose.animation.core.Animatable(0f) }
+            LaunchedEffect(file.uri) {
+                tumbleProgress.snapTo(0f)
+                tumbleProgress.animateTo(1f, animationSpec = tween(760))
+            }
             Box(
                 Modifier.fillMaxWidth().aspectRatio(0.96f).padding(horizontal = 5.dp)
                     .pointerInput(file.uri) {
@@ -499,7 +504,15 @@ fun PlayerScreen(
                 Box(Modifier.fillMaxSize(0.76f).background(Brush.radialGradient(listOf(dynamicAccent.copy(alpha = discAura), dynamicCompanion.copy(alpha = discAura * 0.50f), dynamicAccent.copy(alpha = 0f), Color.Transparent))), contentAlignment = Alignment.Center) {}
                 Box(
                     Modifier.fillMaxHeight(0.88f).aspectRatio(1f)
-                        .graphicsLayer { rotationZ = if (playing) discRotation else 0f }
+                        .graphicsLayer {
+                            val tumble = tumbleProgress.value
+                            rotationX = kotlin.math.sin(tumble * (2f * Math.PI).toFloat()) * 58f
+                            rotationY = tumble * 360f
+                            rotationZ = (if (playing) discRotation else 0f) + tumble * 270f
+                            scaleX = 0.92f + 0.08f * tumble
+                            scaleY = 0.92f + 0.08f * tumble
+                            cameraDistance = 12f * density
+                        }
                         .clip(CircleShape)
                         .background(Brush.radialGradient(listOf(dynamicCompanion.copy(alpha = 0.50f), dynamicSoft, dynamicDeep, Color(0xFF08090D))))
                         .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape),
