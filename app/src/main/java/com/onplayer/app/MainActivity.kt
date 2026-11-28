@@ -129,7 +129,9 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
     val isAmoled = themeMode == "AMOLED Black"
     val isAccentTheme = false
-    val accent = Color(0xFF8B5CF6)
+    val themeTrack = current ?: lastPlayed
+    val themeArtwork by rememberArtworkOrNull(themeTrack?.uri)
+    val accent = remember(themeArtwork) { sampleArtworkAccent(themeArtwork) }
     val dark = isAccentTheme || isAmoled || (themeMode != "Light" && (themeMode != "System" || systemDark))
     val background = when { isAmoled -> Color.Black; dark -> Deep; else -> Color(0xFFF5F4FA) }
     val foreground = if (dark) Color.White else Color(0xFF22232E)
@@ -251,7 +253,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                 bottomBar={
                     Column {
                         val miniTrack = current ?: lastPlayed
-                        if (miniTrack != null) MiniPlayer(miniTrack, playing, dark, controller, onClick={ vm.open(miniTrack); playerOpen=true }, onToggle={ if (controller?.isPlaying==true) controller.pause() else controller?.play() })
+                        if (miniTrack != null) MiniPlayer(miniTrack, playing, dark, controller, accent, onClick={ vm.open(miniTrack); playerOpen=true }, onToggle={ if (controller?.isPlaying==true) controller.pause() else controller?.play() })
                         Row(
                             Modifier.fillMaxWidth().padding(horizontal=12.dp, vertical=7.dp)
                                 .clip(RoundedCornerShape(28.dp))
@@ -292,7 +294,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
             ) { padding ->
                 Box(Modifier.fillMaxSize().padding(padding)) {
                     when(tab) {
-                        Tab.Home -> HomeTab(files, lastPlayed, playing, scanning, scanError, dark, foreground, muted, surface, onRefresh={vm.scan()}, onPick={audioPicker.launch(arrayOf("audio/*"))}, onOpenSong={vm.open(it);playerOpen=true}, onLibrary={tab=Tab.Library})
+                        Tab.Home -> HomeTab(files, lastPlayed, playing, scanning, scanError, dark, foreground, muted, surface, accent, onRefresh={vm.scan()}, onPick={audioPicker.launch(arrayOf("audio/*"))}, onOpenSong={vm.open(it);playerOpen=true}, onLibrary={tab=Tab.Library})
                         Tab.Library -> SongListTab(tr("Your library"),files,scanning,scanError,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))})
                         Tab.Playlists -> PlaylistsTab(
                             playlists = playlists,
