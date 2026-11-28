@@ -356,7 +356,7 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
             }
         }
         item {
-            last?.let { FeaturedTrack(it,playing,dark,accent,controller,onOpenSong) } ?: Card(shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=surface)) {
+            last?.let { FeaturedTrack(it,playing,dark,accent,controller,onOpenSong,onOpenSong) } ?: Card(shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=surface)) {
                 Column(Modifier.fillMaxWidth().padding(24.dp),horizontalAlignment=Alignment.Start) {
                     Icon(Icons.Default.MusicNote,contentDescription=null,tint=Purple,modifier=Modifier.size(42.dp))
                     Text(tr("Your music awaits"),color=fg,fontSize=20.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp))
@@ -381,13 +381,13 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
 }
 
 @Composable
-private fun FeaturedTrack(file:MediaFile,playing:Boolean,dark:Boolean,accent:Color,controller:MediaController?,onOpen:(MediaFile)->Unit) {
+private fun FeaturedTrack(file:MediaFile,playing:Boolean,dark:Boolean,accent:Color,controller:MediaController?,onOpen:(MediaFile)->Unit,onOpenCard:(MediaFile)->Unit) {
     val artwork by rememberArtwork(file.uri)
     val discRotation=rememberInfiniteTransition(label="featured disc").animateFloat(initialValue=0f,targetValue=360f,animationSpec=infiniteRepeatable(tween(12000,easing=androidx.compose.animation.core.LinearEasing)),label="rotation").value
     var pos by remember { mutableLongStateOf(0L) }
     var dur by remember { mutableLongStateOf(0L) }
     LaunchedEffect(controller,playing) { while(true) { pos=controller?.currentPosition?.coerceAtLeast(0L)?:0L; dur=controller?.duration?.takeIf{it>0L}?:0L; kotlinx.coroutines.delay(if(playing)500L else 1000L) } }
-    Box(Modifier.fillMaxWidth().height(390.dp).clip(RoundedCornerShape(30.dp)).background(Brush.linearGradient(listOf(accent.copy(alpha=0.8f),Color(0xFF141521),Color(0xFF11121A))))) {
+    Box(Modifier.fillMaxWidth().height(390.dp).clip(RoundedCornerShape(30.dp)).background(Brush.linearGradient(listOf(accent.copy(alpha=0.8f),Color(0xFF141521),Color(0xFF11121A)))).clickable { onOpenCard(file) }) {
         artwork?.let{Image(it.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)}
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xE9090A12),Color(0xFF090A12))))) {}
         Column(Modifier.fillMaxSize().padding(18.dp),verticalArrangement=Arrangement.Bottom) {
@@ -416,12 +416,13 @@ private fun QuickAction(title:String,count:Int,icon:androidx.compose.ui.graphics
 private fun SongListTab(title:String,songs:List<MediaFile>,loading:Boolean,error:String?,dark:Boolean,fg:Color,muted:Color,onRefresh:()->Unit,onOpenSong:(MediaFile)->Unit,onPick:()->Unit,emptyText:String="No music found",searchable:Boolean=false) {
     var searchOpen by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
+    val searchReveal by animateFloatAsState(if(searchOpen) 1f else 0f, animationSpec=tween(240), label="library search reveal")
     val visibleSongs=remember(songs,query){ if(query.isBlank()) songs else songs.filter { it.displayTitle.contains(query,true) || it.displayArtist.contains(query,true) || it.displayAlbum.contains(query,true) } }
     Column(Modifier.fillMaxSize().padding(horizontal=18.dp)) {
         Row(Modifier.fillMaxWidth().padding(top=24.dp,bottom=14.dp),verticalAlignment=Alignment.CenterVertically) {
-            if(searchOpen) { OutlinedTextField(value=query,onValueChange={query=it},modifier=Modifier.weight(1f),placeholder={Text(tr("Song, artist or album"))},singleLine=true,shape=RoundedCornerShape(18.dp),leadingIcon={Icon(Icons.Default.Search,null)},trailingIcon={if(query.isNotEmpty())IconButton(onClick={query=""}){Icon(Icons.Default.Clear,null)}}) }
+            if(searchOpen) { OutlinedTextField(value=query,onValueChange={query=it},modifier=Modifier.weight(1f).graphicsLayer { alpha=searchReveal; scaleX=0.96f+0.04f*searchReveal; scaleY=0.96f+0.04f*searchReveal },placeholder={Text(tr("Song, artist or album"))},singleLine=true,shape=RoundedCornerShape(18.dp),leadingIcon={Icon(Icons.Default.Search,null)},trailingIcon={if(query.isNotEmpty())IconButton(onClick={query=""}){Icon(Icons.Default.Clear,null)}}) }
             else Text(tr(title),color=fg,fontSize=27.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
-            if(searchable) IconButton(onClick={ if(searchOpen){query="";searchOpen=false}else searchOpen=true }) { Icon(if(searchOpen)Icons.Default.Close else Icons.Default.Search,contentDescription="Search in library",tint=fg) }
+            if(searchable) IconButton(onClick={ if(searchOpen){query="";searchOpen=false}else searchOpen=true },modifier=Modifier.graphicsLayer { scaleX=if(searchOpen)0.94f else 1f; scaleY=if(searchOpen)0.94f else 1f }) { Icon(if(searchOpen)Icons.Default.Close else Icons.Default.Search,contentDescription="Search in library",tint=fg) }
         }
         if(loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         if(error!=null) Text(error,color=muted,modifier=Modifier.padding(bottom=8.dp))
