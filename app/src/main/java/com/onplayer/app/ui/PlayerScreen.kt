@@ -408,15 +408,15 @@ fun PlayerScreen(
                     .graphicsLayer {
                         scaleX = 1.08f
                         scaleY = 1.08f
-                        alpha = if (isDarkPlayer) 0.58f else 0.24f
+                        alpha = if (isDarkPlayer) 0.58f else 0.34f
                     },
                 contentScale = ContentScale.Crop
             )
         }
         val ambientPulse = rememberInfiniteTransition(label = "ambient wallpaper")
             .animateFloat(0.22f, 0.38f, infiniteRepeatable(tween(3200), RepeatMode.Reverse), label = "ambient pulse").value
-        Box(Modifier.fillMaxSize().background(if (isDarkPlayer) dynamicDeep.copy(alpha = ambientPulse) else Color(0xFFF8F8FC).copy(alpha = 0.70f)))
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(if (isDarkPlayer) listOf(dynamicAccent.copy(alpha = 0.18f), dynamicCompanion.copy(alpha = 0.14f), dynamicDeep.copy(alpha = 0.52f), Color(0xFF10131C).copy(alpha = 0.80f), Color(0xFF050609)) else listOf(Color(0xFFFFF8FC).copy(alpha = 0.48f), Color(0xFFF8F8FC).copy(alpha = 0.42f), Color(0xFFF1F2F7).copy(alpha = 0.52f), Color(0xFFF7F7FA).copy(alpha = 0.58f))))) {
+        Box(Modifier.fillMaxSize().background(if (isDarkPlayer) dynamicDeep.copy(alpha = ambientPulse) else lerp(Color(0xFFF8F8FC), dynamicAccent, 0.12f).copy(alpha = 0.72f)))
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(if (isDarkPlayer) listOf(dynamicAccent.copy(alpha = 0.18f), dynamicCompanion.copy(alpha = 0.14f), dynamicDeep.copy(alpha = 0.52f), Color(0xFF10131C).copy(alpha = 0.80f), Color(0xFF050609)) else listOf(dynamicAccent.copy(alpha = 0.20f), dynamicCompanion.copy(alpha = 0.13f), Color(0xFFFFF8FC).copy(alpha = 0.34f), Color(0xFFF8F8FC).copy(alpha = 0.52f), Color(0xFFF1F2F7).copy(alpha = 0.62f))))) {
 
         Column(
             Modifier.fillMaxSize()
