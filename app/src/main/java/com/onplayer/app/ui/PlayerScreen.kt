@@ -403,23 +403,8 @@ fun PlayerScreen(
     }
 
     Box(Modifier.fillMaxSize()) {
-        // Album artwork wallpaper: blurred and softly tinted in both themes.
-        artwork.bitmap?.let { bitmap ->
-            Image(
-                bitmap.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize()
-                    .blur(if (isDarkPlayer) 2.dp else 4.dp)
-                    .graphicsLayer {
-                        scaleX = 1.08f
-                        scaleY = 1.08f
-                        alpha = if (isDarkPlayer) 0.58f else 0.34f
-                    },
-                contentScale = ContentScale.Crop
-            )
-        }
-        val ambientTintAlpha = 0.30f
-        Box(Modifier.fillMaxSize().background(if (isDarkPlayer) dynamicDeep.copy(alpha = ambientTintAlpha) else lerp(Color(0xFFF8F8FC), dynamicAccent, 0.12f).copy(alpha = 0.72f)))
+        // Album artwork stays in the mini-player; full Now Playing uses a clean backdrop.
+        Box(Modifier.fillMaxSize().background(if (isDarkPlayer) Color(0xFF08080E) else Color(0xFFF5F4FA)))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(if (isDarkPlayer) listOf(dynamicAccent.copy(alpha = 0.18f), dynamicCompanion.copy(alpha = 0.14f), dynamicDeep.copy(alpha = 0.52f), Color(0xFF10131C).copy(alpha = 0.80f), Color(0xFF050609)) else listOf(dynamicAccent.copy(alpha = 0.20f), dynamicCompanion.copy(alpha = 0.13f), Color(0xFFFFF8FC).copy(alpha = 0.34f), Color(0xFFF8F8FC).copy(alpha = 0.52f), Color(0xFFF1F2F7).copy(alpha = 0.62f))))) {
 
         Column(
