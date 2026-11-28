@@ -11,6 +11,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.foundation.Canvas
@@ -679,7 +680,7 @@ private fun GlassIconButton(
     val shape = CircleShape
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(if (pressed) 0.94f else 1f, animationSpec=tween(160), label="glass press")
+    val pressScale by animateFloatAsState(if (pressed) 0.93f else 1f, animationSpec=spring(dampingRatio=0.62f,stiffness=420f), label="glass press")
     val lightFill = if (active) lerp(Color.White, artworkAccent, 0.18f) else lerp(Color.White, artworkAccent, 0.045f)
     val lightEdge = lerp(Color(0xFFADB4C2), artworkAccent, if (active) 0.52f else 0.30f)
     Box(
