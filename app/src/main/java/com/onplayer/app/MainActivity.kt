@@ -485,24 +485,25 @@ private fun MiniPlayer(file:MediaFile,playing:Boolean,dark:Boolean,controller:Me
         }
     }
     Box(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=5.dp).clip(RoundedCornerShape(17.dp))) {
-      if (art != null) Image(art!!.asImageBitmap(),contentDescription=null,modifier=Modifier.fillMaxSize().blur(10.dp).graphicsLayer { alpha=0.22f; scaleX=1.08f; scaleY=1.08f },contentScale=ContentScale.Crop)
-      Box(Modifier.fillMaxWidth().roundGlass(dark,Purple,RoundedCornerShape(17.dp))) {
-      Column(Modifier.fillMaxWidth().animateContentSize()) {
-      Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=10.dp,vertical=7.dp),verticalAlignment=Alignment.CenterVertically) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Purple),contentAlignment=Alignment.Center) { if(art!=null)Image(art!!.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)else Icon(Icons.Default.MusicNote,null,tint=Color.White) }
-        Column(Modifier.weight(1f).padding(horizontal=10.dp)) { Text(file.displayTitle,color=if(dark)Color.White else Color(0xFF20202A),fontWeight=FontWeight.SemiBold,maxLines=1);Text(file.displayArtist,color=if(dark) Color(0xFFB8B8C8) else Color(0xFF555967),fontSize=11.sp,maxLines=1) }
-        IconButton(onClick={controller?.seekToPreviousMediaItem()}) { Icon(Icons.Default.SkipPrevious,null,tint=accent) }
-        IconButton(onClick=onToggle) { Icon(if(playing)Icons.Default.Pause else Icons.Default.PlayArrow,null,tint=accent) }
-        IconButton(onClick={controller?.seekToNextMediaItem()}) { Icon(Icons.Default.SkipNext,null,tint=accent) }
-      }
-      Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(bottom=6.dp)) {
-        Slider(value=if(dur>0L)pos.toFloat().coerceIn(0f,dur.toFloat())else 0f,onValueChange={v->if(dur>0L)controller?.seekTo(v.toLong())},valueRange=0f..(dur.coerceAtLeast(1L).toFloat()),modifier=Modifier.fillMaxWidth().height(18.dp),colors=SliderDefaults.colors(thumbColor=accent,activeTrackColor=accent,inactiveTrackColor=if(dark)Color.White.copy(alpha=0.15f)else Color.Black.copy(alpha=0.10f)))
-        Row(Modifier.fillMaxWidth().padding(top=2.dp),horizontalArrangement=Arrangement.SpaceBetween) {
-          Text(formatMiniTime(pos),fontSize=9.sp,color=if(dark) Color(0xFFB8B8C8) else Color(0xFF555967))
-          Text(formatMiniTime(dur),fontSize=9.sp,color=if(dark) Color(0xFFB8B8C8) else Color(0xFF555967))
+        if (art != null) Image(art!!.asImageBitmap(),contentDescription=null,modifier=Modifier.fillMaxSize().blur(10.dp).graphicsLayer { alpha=0.24f; scaleX=1.08f; scaleY=1.08f },contentScale=ContentScale.Crop)
+        Box(Modifier.fillMaxWidth().roundGlass(dark,Purple,RoundedCornerShape(17.dp))) {
+            Column(Modifier.fillMaxWidth().animateContentSize()) {
+                Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=10.dp,vertical=7.dp),verticalAlignment=Alignment.CenterVertically) {
+                    Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Purple),contentAlignment=Alignment.Center) { if(art!=null)Image(art!!.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)else Icon(Icons.Default.MusicNote,null,tint=Color.White) }
+                    Column(Modifier.weight(1f).padding(horizontal=10.dp)) { Text(file.displayTitle,color=if(dark)Color.White else Color(0xFF20202A),fontWeight=FontWeight.SemiBold,maxLines=1);Text(file.displayArtist,color=if(dark) Color(0xFFB8B8C8) else Color(0xFF555967),fontSize=11.sp,maxLines=1) }
+                    IconButton(onClick={controller?.seekToPreviousMediaItem()}) { Icon(Icons.Default.SkipPrevious,null,tint=accent) }
+                    IconButton(onClick=onToggle) { Icon(if(playing)Icons.Default.Pause else Icons.Default.PlayArrow,null,tint=accent) }
+                    IconButton(onClick={controller?.seekToNextMediaItem()}) { Icon(Icons.Default.SkipNext,null,tint=accent) }
+                }
+                Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(bottom=6.dp)) {
+                    Slider(value=if(dur>0L)pos.toFloat().coerceIn(0f,dur.toFloat())else 0f,onValueChange={v->if(dur>0L)controller?.seekTo(v.toLong())},valueRange=0f..(dur.coerceAtLeast(1L).toFloat()),modifier=Modifier.fillMaxWidth().height(18.dp),colors=SliderDefaults.colors(thumbColor=accent,activeTrackColor=accent,inactiveTrackColor=if(dark)Color.White.copy(alpha=0.15f)else Color.Black.copy(alpha=0.10f)))
+                    Row(Modifier.fillMaxWidth().padding(top=2.dp),horizontalArrangement=Arrangement.SpaceBetween) {
+                        Text(formatMiniTime(pos),fontSize=9.sp,color=if(dark) Color(0xFFB8B8C8) else Color(0xFF555967))
+                        Text(formatMiniTime(dur),fontSize=9.sp,color=if(dark) Color(0xFFB8B8C8) else Color(0xFF555967))
+                    }
+                }
+            }
         }
-      }
-    }
     }
 }
 private fun formatMiniTime(ms:Long):String {
