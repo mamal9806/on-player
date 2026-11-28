@@ -80,7 +80,11 @@ private fun extractArtworkAccent(bitmap: Bitmap?): Color {
         if (score > bestScore) { bestScore = score; best = pixel }
     }
     if (bestScore < 0f) return Color(0xFFE34B62)
-    val accentHsv = FloatArray(3)\n    android.graphics.Color.colorToHSV(best, accentHsv)\n    accentHsv[1] = accentHsv[1].coerceIn(0.45f, 0.78f)\n    accentHsv[2] = 0.92f\n    return Color(android.graphics.Color.HSVToColor(accentHsv)).copy(alpha = 1f)
+    val accentHsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(best, accentHsv)
+    accentHsv[1] = accentHsv[1].coerceIn(0.45f, 0.78f)
+    accentHsv[2] = 0.92f
+    return Color(android.graphics.Color.HSVToColor(accentHsv)).copy(alpha = 1f)
 }
 
 
