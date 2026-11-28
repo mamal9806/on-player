@@ -398,19 +398,25 @@ fun PlayerScreen(
     }
 
     Box(Modifier.fillMaxSize()) {
-        // Album artwork wallpaper: blurred and softly tinted behind the player controls.
-        if (isDarkPlayer) artwork.bitmap?.let { bitmap ->
+        // Album artwork wallpaper: blurred and softly tinted in both themes.
+        artwork.bitmap?.let { bitmap ->
             Image(
                 bitmap.asImageBitmap(),
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize().blur(8.dp).graphicsLayer { scaleX = 1.08f; scaleY = 1.08f },
+                modifier = Modifier.fillMaxSize()
+                    .blur(if (isDarkPlayer) 8.dp else 24.dp)
+                    .graphicsLayer {
+                        scaleX = 1.08f
+                        scaleY = 1.08f
+                        alpha = if (isDarkPlayer) 0.58f else 0.24f
+                    },
                 contentScale = ContentScale.Crop
             )
         }
         val ambientPulse = rememberInfiniteTransition(label = "ambient wallpaper")
             .animateFloat(0.22f, 0.38f, infiniteRepeatable(tween(3200), RepeatMode.Reverse), label = "ambient pulse").value
-        Box(Modifier.fillMaxSize().background(if (isDarkPlayer) dynamicDeep.copy(alpha = ambientPulse) else Color(0xFFF8F8FC)))
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(if (isDarkPlayer) listOf(dynamicAccent.copy(alpha = 0.18f), dynamicCompanion.copy(alpha = 0.14f), dynamicDeep.copy(alpha = 0.52f), Color(0xFF10131C).copy(alpha = 0.80f), Color(0xFF050609)) else listOf(Color(0xFFFFF8FC), Color(0xFFF8F8FC), Color(0xFFF1F2F7), Color(0xFFF7F7FA))))) {
+        Box(Modifier.fillMaxSize().background(if (isDarkPlayer) dynamicDeep.copy(alpha = ambientPulse) else Color(0xFFF8F8FC).copy(alpha = 0.70f)))
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(if (isDarkPlayer) listOf(dynamicAccent.copy(alpha = 0.18f), dynamicCompanion.copy(alpha = 0.14f), dynamicDeep.copy(alpha = 0.52f), Color(0xFF10131C).copy(alpha = 0.80f), Color(0xFF050609)) else listOf(Color(0xFFFFF8FC).copy(alpha = 0.48f), Color(0xFFF8F8FC).copy(alpha = 0.42f), Color(0xFFF1F2F7).copy(alpha = 0.52f), Color(0xFFF7F7FA).copy(alpha = 0.58f))))) {
 
         Column(
             Modifier.fillMaxSize()
