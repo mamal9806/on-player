@@ -431,7 +431,7 @@ private fun FeaturedTrack(file:MediaFile,playing:Boolean,dark:Boolean,accent:Col
 @Composable
 private fun QuickAction(title:String,count:Int,icon:androidx.compose.ui.graphics.vector.ImageVector,modifier:Modifier,dark:Boolean,fg:Color,accent:Color,onClick:()->Unit) {
     Card(modifier.clickable(onClick=onClick).roundGlass(dark,accent,RoundedCornerShape(22.dp)),shape=RoundedCornerShape(22.dp),colors=CardDefaults.cardColors(containerColor=Color.Transparent)) {
-        Column(Modifier.padding(16.dp)) { Icon(icon,contentDescription=null,tint=accent,modifier=Modifier.size(23.dp)); Text(count.toString(),color=fg,fontSize=25.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp)); Text(title,color=Subtle,fontSize=12.sp) }
+        Column(Modifier.padding(16.dp)) { Icon(icon,contentDescription=null,tint=accent,modifier=Modifier.size(23.dp)); Text(count.toString(),color=fg,fontSize=25.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp)); Text(title,color=if(dark) Color(0xFFB8B8C8) else Color(0xFF555967),fontSize=12.sp) }
     }
 }
 
@@ -496,7 +496,7 @@ private fun MiniPlayer(file:MediaFile,playing:Boolean,dark:Boolean,controller:Me
     Column(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=5.dp).roundGlass(dark,Purple,RoundedCornerShape(17.dp))) {
       Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=10.dp,vertical=7.dp),verticalAlignment=Alignment.CenterVertically) {
         Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Purple),contentAlignment=Alignment.Center) { if(art!=null)Image(art!!.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)else Icon(Icons.Default.MusicNote,null,tint=Color.White) }
-        Column(Modifier.weight(1f).padding(horizontal=10.dp)) { Text(file.displayTitle,color=if(dark)Color.White else Color(0xFF20202A),fontWeight=FontWeight.SemiBold,maxLines=1);Text(file.displayArtist,color=Subtle,fontSize=11.sp,maxLines=1) }
+        Column(Modifier.weight(1f).padding(horizontal=10.dp)) { Text(file.displayTitle,color=if(dark)Color.White else Color(0xFF20202A),fontWeight=FontWeight.SemiBold,maxLines=1);Text(file.displayArtist,color=if(dark) Color(0xFFB8B8C8 else Color(0xFF555967),fontSize=11.sp,maxLines=1) }
         IconButton(onClick={controller?.seekToPreviousMediaItem()}) { Icon(Icons.Default.SkipPrevious,null,tint=accent) }
         IconButton(onClick=onToggle) { Icon(if(playing)Icons.Default.Pause else Icons.Default.PlayArrow,null,tint=accent) }
         IconButton(onClick={controller?.seekToNextMediaItem()}) { Icon(Icons.Default.SkipNext,null,tint=accent) }
@@ -504,8 +504,8 @@ private fun MiniPlayer(file:MediaFile,playing:Boolean,dark:Boolean,controller:Me
       Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(bottom=6.dp)) {
         Slider(value=if(dur>0L)pos.toFloat().coerceIn(0f,dur.toFloat())else 0f,onValueChange={v->if(dur>0L)controller?.seekTo(v.toLong())},valueRange=0f..(dur.coerceAtLeast(1L).toFloat()),modifier=Modifier.fillMaxWidth().height(18.dp),colors=SliderDefaults.colors(thumbColor=accent,activeTrackColor=accent,inactiveTrackColor=if(dark)Color.White.copy(alpha=0.15f)else Color.Black.copy(alpha=0.10f)))
         Row(Modifier.fillMaxWidth().padding(top=2.dp),horizontalArrangement=Arrangement.SpaceBetween) {
-          Text(formatMiniTime(pos),fontSize=9.sp,color=Subtle)
-          Text(formatMiniTime(dur),fontSize=9.sp,color=Subtle)
+          Text(formatMiniTime(pos),fontSize=9.sp,color=if(dark) Color(0xFFB8B8C8) else Color(0xFF555967))
+          Text(formatMiniTime(dur),fontSize=9.sp,color=if(dark) Color(0xFFB8B8C8) else Color(0xFF555967))
         }
       }
     }
