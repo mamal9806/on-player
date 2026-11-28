@@ -376,7 +376,7 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
                     Icon(Icons.Default.MusicNote,contentDescription=null,tint=Purple,modifier=Modifier.size(42.dp))
                     Text(tr("Your music awaits"),color=fg,fontSize=20.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp))
                     Text(tr("Choose a song to start listening."),color=muted)
-                    Button(onClick=onPick,modifier=Modifier.padding(top=14.dp)) { Icon(Icons.Default.FolderOpen,null); Spacer(Modifier.width(6.dp)); Text(tr("Choose music")) }
+                    Button(onClick=onPick,modifier=Modifier.padding(top=14.dp),colors=ButtonDefaults.buttonColors(containerColor=accent,contentColor=Color.White)) { Icon(Icons.Default.FolderOpen,null); Spacer(Modifier.width(6.dp)); Text(tr("Choose music"),color=Color.White,fontWeight=FontWeight.SemiBold) }
                 }
             }
         }
@@ -864,8 +864,9 @@ private fun sampleArtworkAccent(bitmap:android.graphics.Bitmap?):Color {
     if(count==0) return Purple
     val r=(red/count).toInt(); val g=(green/count).toInt(); val b=(blue/count).toInt()
     val hsv=FloatArray(3); android.graphics.Color.colorToHSV(android.graphics.Color.rgb(r,g,b),hsv)
-    hsv[1]=(hsv[1]*1.20f).coerceIn(0.42f,0.88f)
-    hsv[2]=(hsv[2]*1.08f).coerceIn(0.52f,0.88f)
+    // Keep artwork-derived accents vivid enough to remain visible on dark glass.
+    hsv[1]=(hsv[1]*1.15f).coerceIn(0.48f,0.78f)
+    hsv[2]=0.92f
     return Color(android.graphics.Color.HSVToColor(hsv))
 }
 
