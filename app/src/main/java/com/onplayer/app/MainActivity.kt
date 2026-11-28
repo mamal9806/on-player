@@ -20,6 +20,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -390,7 +391,7 @@ private fun GlassCardColors(dark:Boolean, accent:Color):CardColors = CardDefault
 
 private fun Modifier.roundGlass(dark:Boolean,accent:Color,shape:RoundedCornerShape=RoundedCornerShape(24.dp)):Modifier = this
     .clip(shape)
-    .background(if(dark) Brush.linearGradient(listOf(Color.White.copy(alpha=0.075f),accent.copy(alpha=0.045f),Color(0xFF14141F).copy(alpha=0.92f))) else Brush.linearGradient(listOf(Color.White.copy(alpha=0.94f),accent.copy(alpha=0.06f),Color(0xFFF4F5FA).copy(alpha=0.92f))))
+    .background(if(dark) Brush.linearGradient(listOf(Color.White.copy(alpha=0.075f),accent.copy(alpha=0.045f),Color(0xFF14141F).copy(alpha=0.76f))) else Brush.linearGradient(listOf(Color.White.copy(alpha=0.78f),accent.copy(alpha=0.08f),Color(0xFFF4F5FA).copy(alpha=0.78f))))
     .border(1.dp,if(dark) Brush.linearGradient(listOf(Color.White.copy(alpha=0.19f),accent.copy(alpha=0.20f),Color.White.copy(alpha=0.07f))) else Brush.linearGradient(listOf(Color.White.copy(alpha=0.96f),accent.copy(alpha=0.18f),Color(0xFFD6DCE8)),),shape)
 
 @Composable
@@ -501,6 +502,7 @@ private fun MiniPlayer(file:MediaFile,playing:Boolean,dark:Boolean,controller:Me
           Text(formatMiniTime(dur),fontSize=9.sp,color=if(dark) Color(0xFFB8B8C8) else Color(0xFF555967))
         }
       }
+    }
     }
 }
 private fun formatMiniTime(ms:Long):String {
