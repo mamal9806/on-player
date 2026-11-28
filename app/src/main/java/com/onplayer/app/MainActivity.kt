@@ -306,7 +306,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                     },
                     label = "page transition"
                 ) { activeTab ->
-                    Box(Modifier.fillMaxSize()) {
+                    Box(Modifier.fillMaxSize().background(if(activeTab==Tab.Library) Color.Black else Color.Transparent)) {
                         when(activeTab) {
                             Tab.Home -> HomeTab(files, lastPlayed, playing, scanning, scanError, dark, foreground, muted, surface, accent, controller, onRefresh={vm.scan()}, onPick={audioPicker.launch(arrayOf("audio/*"))}, onOpenSong={vm.open(it);playerOpen=true}, onLibrary={tab=Tab.Library})
                             Tab.Library -> SongListTab(tr("Your library"),files,scanning,scanError,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))},searchable=true)
