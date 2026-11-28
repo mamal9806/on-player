@@ -443,10 +443,7 @@ private fun SongListTab(title:String,songs:List<MediaFile>,loading:Boolean,error
         if(songs.isEmpty()) {
             Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) { Column(horizontalAlignment=Alignment.CenterHorizontally) { Icon(Icons.Default.MusicNote,contentDescription=null,tint=Purple,modifier=Modifier.size(48.dp)); Text(tr(emptyText),color=muted,modifier=Modifier.padding(top=12.dp)); Button(onClick=onPick,modifier=Modifier.padding(top=12.dp)){Text(tr("Pick a song"))} } }
         } else LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { items(visibleSongs,key={it.uri.toString()}) { SongRow(it,dark,fg,muted,onClick={onOpenSong(it)}) } }
-        Row(Modifier.fillMaxWidth().padding(vertical=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick=onRefresh,modifier=Modifier.weight(1f)) { Icon(Icons.Default.Refresh,null);Spacer(Modifier.width(4.dp));Text(tr("Rescan")) }
-            Button(onClick=onPick,modifier=Modifier.weight(1f)) { Icon(Icons.Default.FolderOpen,null);Spacer(Modifier.width(4.dp));Text(tr("Open file")) }
-        }
+
     }
 }
 
