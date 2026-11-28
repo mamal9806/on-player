@@ -404,7 +404,7 @@ fun PlayerScreen(
                 bitmap.asImageBitmap(),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize()
-                    .blur(if (isDarkPlayer) 8.dp else 24.dp)
+                    .blur(if (isDarkPlayer) 6.dp else 12.dp)
                     .graphicsLayer {
                         scaleX = 1.08f
                         scaleY = 1.08f
