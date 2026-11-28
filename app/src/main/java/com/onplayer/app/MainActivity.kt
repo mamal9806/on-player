@@ -137,8 +137,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
     val isAmoled = themeMode == "AMOLED Black"
     val isAccentTheme = false
     val themeTrack = current ?: lastPlayed
-    val themeArtwork by rememberArtworkOrNull(themeTrack?.uri)
-    val accent = remember(themeArtwork) { sampleArtworkAccent(themeArtwork) }
+    val accent = Purple
     val dark = isAccentTheme || isAmoled || (themeMode != "Light" && (themeMode != "System" || systemDark))
     val background = when { isAmoled -> Color.Black; dark -> Deep; else -> Color(0xFFF5F4FA) }
     val foreground = if (dark) Color.White else Color(0xFF22232E)
@@ -350,16 +349,7 @@ private fun rememberRootController(): MediaController? {
 
 @Composable
 private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loading:Boolean,error:String?,dark:Boolean,fg:Color,muted:Color,surface:Color,accent:Color,controller:MediaController?,onRefresh:()->Unit,onPick:()->Unit,onOpenSong:(MediaFile)->Unit,onLibrary:()->Unit) {
-    val homeArtwork by rememberArtworkOrNull(last?.uri)
-    Box(Modifier.fillMaxSize()) {
-        homeArtwork?.let { art ->
-            Image(
-                art.asImageBitmap(), contentDescription=null,
-                modifier=Modifier.fillMaxSize().blur(8.dp).graphicsLayer { scaleX=1.12f; scaleY=1.12f; alpha=if(dark)0.22f else 0.24f },
-                contentScale=ContentScale.Crop
-            )
-        }
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(accent.copy(alpha=if(dark)0.18f else 0.12f), if(dark)Deep.copy(alpha=0.70f) else Color(0xFFF5F4FA).copy(alpha=0.55f), if(dark)Deep else Color(0xFFF5F4FA)))))
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Purple.copy(alpha=if(dark)0.14f else 0.08f), if(dark)Deep.copy(alpha=0.72f) else Color(0xFFF5F4FA).copy(alpha=0.58f), if(dark)Deep else Color(0xFFF5F4FA))))) {
         LazyColumn(Modifier.fillMaxSize().padding(horizontal=20.dp),contentPadding=PaddingValues(top=24.dp,bottom=28.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
         item {
             Row(verticalAlignment=Alignment.CenterVertically) {
@@ -493,7 +483,10 @@ private fun MiniPlayer(file:MediaFile,playing:Boolean,dark:Boolean,controller:Me
             kotlinx.coroutines.delay(if (playing) 500L else 1000L)
         }
     }
-    Column(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=5.dp).roundGlass(dark,Purple,RoundedCornerShape(17.dp))) {
+    Box(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=5.dp).clip(RoundedCornerShape(17.dp))) {
+      if (art != null) Image(art!!.asImageBitmap(),contentDescription=null,modifier=Modifier.fillMaxSize().blur(10.dp).graphicsLayer { alpha=0.22f; scaleX=1.08f; scaleY=1.08f },contentScale=ContentScale.Crop)
+      Box(Modifier.fillMaxWidth().roundGlass(dark,Purple,RoundedCornerShape(17.dp))) {
+      Column(Modifier.fillMaxWidth().animateContentSize()) {
       Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=10.dp,vertical=7.dp),verticalAlignment=Alignment.CenterVertically) {
         Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Purple),contentAlignment=Alignment.Center) { if(art!=null)Image(art!!.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)else Icon(Icons.Default.MusicNote,null,tint=Color.White) }
         Column(Modifier.weight(1f).padding(horizontal=10.dp)) { Text(file.displayTitle,color=if(dark)Color.White else Color(0xFF20202A),fontWeight=FontWeight.SemiBold,maxLines=1);Text(file.displayArtist,color=if(dark) Color(0xFFB8B8C8) else Color(0xFF555967),fontSize=11.sp,maxLines=1) }
