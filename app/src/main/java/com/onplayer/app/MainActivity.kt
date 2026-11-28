@@ -284,8 +284,8 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                                         .padding(vertical=6.dp),
                                     horizontalAlignment=Alignment.CenterHorizontally
                                 ) {
-                                    Icon(icon,null,tint=if(selected) Purple else muted,modifier=Modifier.size(19.dp))
-                                    Text(tr(item.title),color=if(selected) Purple else muted,fontSize=8.sp,maxLines=1)
+                                    Icon(icon,null,tint=if(selected) accent else muted,modifier=Modifier.size(19.dp))
+                                    Text(tr(item.title),color=if(selected) accent else muted,fontSize=8.sp,maxLines=1)
                                 }
                             }
                         }
@@ -353,7 +353,7 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
                     Text(tr("On Player"),color=fg,fontSize=32.sp,fontWeight=FontWeight.Bold,lineHeight=36.sp)
                     Text(tr("Lightweight. Ad-free. Just music."),color=muted,fontSize=14.sp,fontWeight=FontWeight.Medium,modifier=Modifier.padding(top=5.dp))
                 }
-                Box(Modifier.size(54.dp).clip(RoundedCornerShape(18.dp)).background(Brush.linearGradient(listOf(Color(0xFF754DCA),Color(0xFF252C5C)))),contentAlignment=Alignment.Center) { Icon(Icons.Default.Headphones,contentDescription=null,modifier=Modifier.size(28.dp),tint=Color.White) }
+                Box(Modifier.size(54.dp).clip(RoundedCornerShape(18.dp)).background(Brush.linearGradient(listOf(accent,accent.copy(alpha=0.55f)))),contentAlignment=Alignment.Center) { Icon(Icons.Default.Headphones,contentDescription=null,modifier=Modifier.size(28.dp),tint=Color.White) }
             }
         }
         item {
@@ -368,11 +368,11 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
         }
         item {
             Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                QuickAction(tr("All songs"),files.size,Icons.Default.LibraryMusic,Modifier.weight(1f),dark,fg,onLibrary)
-                QuickAction(tr("Recently added"),files.take(12).size,Icons.Default.History,Modifier.weight(1f),dark,fg,onLibrary)
+                QuickAction(tr("All songs"),files.size,Icons.Default.LibraryMusic,Modifier.weight(1f),dark,fg,accent,onLibrary)
+                QuickAction(tr("Recently added"),files.take(12).size,Icons.Default.History,Modifier.weight(1f),dark,fg,accent,onLibrary)
             }
         }
-        item { Row(verticalAlignment=Alignment.CenterVertically) { Text(tr("Recently added"),color=fg,fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f)); Text(tr("See all"),color=Purple,modifier=Modifier.clickable(onClick=onLibrary)) } }
+        item { Row(verticalAlignment=Alignment.CenterVertically) { Text(tr("Recently added"),color=fg,fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f)); Text(tr("See all"),color=accent,modifier=Modifier.clickable(onClick=onLibrary)) } }
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         if (error!=null) item { Text(error,color=muted) }
         items(files.take(12),key={it.uri.toString()}) { song -> SongRow(song,dark,fg,muted,onClick={onOpenSong(song)}) }
@@ -401,9 +401,9 @@ private fun FeaturedTrack(file:MediaFile,playing:Boolean,dark:Boolean,accent:Col
 }
 
 @Composable
-private fun QuickAction(title:String,count:Int,icon:androidx.compose.ui.graphics.vector.ImageVector,modifier:Modifier,dark:Boolean,fg:Color,onClick:()->Unit) {
+private fun QuickAction(title:String,count:Int,icon:androidx.compose.ui.graphics.vector.ImageVector,modifier:Modifier,dark:Boolean,fg:Color,accent:Color,onClick:()->Unit) {
     Card(modifier.clickable(onClick=onClick),shape=RoundedCornerShape(22.dp),colors=CardDefaults.cardColors(containerColor=if(dark)CardDark else Color.White)) {
-        Column(Modifier.padding(16.dp)) { Icon(icon,contentDescription=null,tint=Purple,modifier=Modifier.size(23.dp)); Text(count.toString(),color=fg,fontSize=25.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp)); Text(title,color=Subtle,fontSize=12.sp) }
+        Column(Modifier.padding(16.dp)) { Icon(icon,contentDescription=null,tint=accent,modifier=Modifier.size(23.dp)); Text(count.toString(),color=fg,fontSize=25.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp)); Text(title,color=Subtle,fontSize=12.sp) }
     }
 }
 
@@ -797,6 +797,40 @@ private fun PlaylistsTab(
             confirmButton={TextButton(onClick={showAddSongs=false}){Text(tr("Done"))}}
         )
     }
+}
+
+@Composable
+private fun rememberArtworkOrNull(uri:android.net.Uri?):State<android.graphics.Bitmap?> {
+    val context=LocalContext.current
+    return produceState<android.graphics.Bitmap?>(null,uri) {
+        value=withContext(Dispatchers.IO) {
+            if(uri==null) null else {
+                val retriever=MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(context,uri)
+                    retriever.embeddedPicture?.let{bytes->android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.size)}
+                } catch(_:Exception){null} finally { try{retriever.release()}catch(_:Exception){} }
+            }
+        }
+    }
+}
+
+private fun sampleArtworkAccent(bitmap:android.graphics.Bitmap?):Color {
+    if(bitmap==null) return Purple
+    var red=0L; var green=0L; var blue=0L; var count=0
+    val stepX=(bitmap.width/20).coerceAtLeast(1); val stepY=(bitmap.height/20).coerceAtLeast(1)
+    for(y in 0 until bitmap.height step stepY) for(x in 0 until bitmap.width step stepX) {
+        val px=bitmap.getPixel(x,y)
+        val r=android.graphics.Color.red(px); val g=android.graphics.Color.green(px); val b=android.graphics.Color.blue(px)
+        val hsv=FloatArray(3); android.graphics.Color.colorToHSV(px,hsv)
+        if(hsv[1]>0.22f && hsv[2]>0.18f && hsv[2]<0.94f) { red+=r;green+=g;blue+=b;count++ }
+    }
+    if(count==0) return Purple
+    val r=(red/count).toInt(); val g=(green/count).toInt(); val b=(blue/count).toInt()
+    val hsv=FloatArray(3); android.graphics.Color.colorToHSV(android.graphics.Color.rgb(r,g,b),hsv)
+    hsv[1]=(hsv[1]*1.20f).coerceIn(0.42f,0.88f)
+    hsv[2]=(hsv[2]*1.08f).coerceIn(0.52f,0.88f)
+    return Color(android.graphics.Color.HSVToColor(hsv))
 }
 
 @Composable
