@@ -85,7 +85,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Tab(val title: String) { Home("Home"), Library("Library"), Playlists("Playlists"), Favorites("Favorites"), Search("Search"), Settings("Settings") }
+private enum class Tab(val title: String) { Home("Home"), Library("Library"), Playlists("Playlists"), Favorites("Favorites"), Settings("Settings") }
 
 @Composable
 fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
@@ -274,7 +274,6 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                                     Tab.Library -> Icons.Default.LibraryMusic
                                     Tab.Playlists -> Icons.Default.QueueMusic
                                     Tab.Favorites -> Icons.Default.Favorite
-                                    Tab.Search -> Icons.Default.Search
                                     Tab.Settings -> Icons.Default.Settings
                                 }
                                 val selected = tab == item
@@ -296,7 +295,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                 Box(Modifier.fillMaxSize().padding(padding)) {
                     when(tab) {
                         Tab.Home -> HomeTab(files, lastPlayed, playing, scanning, scanError, dark, foreground, muted, surface, accent, controller, onRefresh={vm.scan()}, onPick={audioPicker.launch(arrayOf("audio/*"))}, onOpenSong={vm.open(it);playerOpen=true}, onLibrary={tab=Tab.Library})
-                        Tab.Library -> SongListTab(tr("Your library"),files,scanning,scanError,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))})
+                        Tab.Library -> SongListTab(tr("Your library"),files,scanning,scanError,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))},searchable=true)
                         Tab.Playlists -> PlaylistsTab(
                             playlists = playlists,
                             files = files,
@@ -313,7 +312,6 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                             onOpenSong = { vm.open(it); playerOpen = true }
                         )
                         Tab.Favorites -> SongListTab(tr("Favorites"),files.filter{it.uri.toString() in favorites},scanning,null,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))},emptyText="No favorites yet")
-                        Tab.Search -> SearchTab(files,favorites,dark,foreground,muted,onOpenSong={vm.open(it);playerOpen=true},onFavorite={vm.toggleFavorite(it)})
                         Tab.Settings -> SettingsTab(themeMode,dark,foreground,muted,vm,onLanguageChanged={ appLanguage=it })
                     }
                 }
@@ -415,14 +413,21 @@ private fun QuickAction(title:String,count:Int,icon:androidx.compose.ui.graphics
 }
 
 @Composable
-private fun SongListTab(title:String,songs:List<MediaFile>,loading:Boolean,error:String?,dark:Boolean,fg:Color,muted:Color,onRefresh:()->Unit,onOpenSong:(MediaFile)->Unit,onPick:()->Unit,emptyText:String="No music found") {
+private fun SongListTab(title:String,songs:List<MediaFile>,loading:Boolean,error:String?,dark:Boolean,fg:Color,muted:Color,onRefresh:()->Unit,onOpenSong:(MediaFile)->Unit,onPick:()->Unit,emptyText:String="No music found",searchable:Boolean=false) {
+    var searchOpen by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    val visibleSongs=remember(songs,query){ if(query.isBlank()) songs else songs.filter { it.displayTitle.contains(query,true) || it.displayArtist.contains(query,true) || it.displayAlbum.contains(query,true) } }
     Column(Modifier.fillMaxSize().padding(horizontal=18.dp)) {
-        Text(tr(title),color=fg,fontSize=27.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=24.dp,bottom=14.dp))
+        Row(Modifier.fillMaxWidth().padding(top=24.dp,bottom=14.dp),verticalAlignment=Alignment.CenterVertically) {
+            if(searchOpen) { OutlinedTextField(value=query,onValueChange={query=it},modifier=Modifier.weight(1f),placeholder={Text(tr("Song, artist or album"))},singleLine=true,shape=RoundedCornerShape(18.dp),leadingIcon={Icon(Icons.Default.Search,null)},trailingIcon={if(query.isNotEmpty())IconButton(onClick={query=""}){Icon(Icons.Default.Clear,null)}}) }
+            else Text(tr(title),color=fg,fontSize=27.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
+            if(searchable) IconButton(onClick={ if(searchOpen){query="";searchOpen=false}else searchOpen=true }) { Icon(if(searchOpen)Icons.Default.Close else Icons.Default.Search,contentDescription="Search in library",tint=fg) }
+        }
         if(loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         if(error!=null) Text(error,color=muted,modifier=Modifier.padding(bottom=8.dp))
         if(songs.isEmpty()) {
             Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) { Column(horizontalAlignment=Alignment.CenterHorizontally) { Icon(Icons.Default.MusicNote,contentDescription=null,tint=Purple,modifier=Modifier.size(48.dp)); Text(tr(emptyText),color=muted,modifier=Modifier.padding(top=12.dp)); Button(onClick=onPick,modifier=Modifier.padding(top=12.dp)){Text(tr("Pick a song"))} } }
-        } else LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { items(songs,key={it.uri.toString()}) { SongRow(it,dark,fg,muted,onClick={onOpenSong(it)}) } }
+        } else LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(bottom=20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) { items(visibleSongs,key={it.uri.toString()}) { SongRow(it,dark,fg,muted,onClick={onOpenSong(it)}) } }
         Row(Modifier.fillMaxWidth().padding(vertical=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick=onRefresh,modifier=Modifier.weight(1f)) { Icon(Icons.Default.Refresh,null);Spacer(Modifier.width(4.dp));Text(tr("Rescan")) }
             Button(onClick=onPick,modifier=Modifier.weight(1f)) { Icon(Icons.Default.FolderOpen,null);Spacer(Modifier.width(4.dp));Text(tr("Open file")) }
