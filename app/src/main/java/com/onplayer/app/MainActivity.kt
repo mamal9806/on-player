@@ -381,8 +381,6 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
 }
 
 @Composable
-
-@Composable
 private fun GlassCardColors(dark:Boolean, accent:Color):CardColors = CardDefaults.cardColors(containerColor=if(dark) Color(0xB91B1B27) else Color(0xCFFFFFFF))
 
 private fun Modifier.roundGlass(dark:Boolean,accent:Color,shape:RoundedCornerShape=RoundedCornerShape(24.dp)):Modifier = this
