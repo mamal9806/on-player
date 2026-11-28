@@ -335,8 +335,18 @@ private fun rememberRootController(): MediaController? {
 }
 
 @Composable
-private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loading:Boolean,error:String?,dark:Boolean,fg:Color,muted:Color,surface:Color,onRefresh:()->Unit,onPick:()->Unit,onOpenSong:(MediaFile)->Unit,onLibrary:()->Unit) {
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal=20.dp),contentPadding=PaddingValues(top=24.dp,bottom=28.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loading:Boolean,error:String?,dark:Boolean,fg:Color,muted:Color,surface:Color,accent:Color,onRefresh:()->Unit,onPick:()->Unit,onOpenSong:(MediaFile)->Unit,onLibrary:()->Unit) {
+    val homeArtwork by rememberArtworkOrNull(last?.uri)
+    Box(Modifier.fillMaxSize()) {
+        homeArtwork?.let { art ->
+            Image(
+                art.asImageBitmap(), contentDescription=null,
+                modifier=Modifier.fillMaxSize().blur(34.dp).graphicsLayer { scaleX=1.12f; scaleY=1.12f; alpha=if(dark)0.22f else 0.24f },
+                contentScale=ContentScale.Crop
+            )
+        }
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(accent.copy(alpha=if(dark)0.18f else 0.12f), if(dark)Deep.copy(alpha=0.70f) else Color(0xFFF5F4FA).copy(alpha=0.55f), if(dark)Deep else Color(0xFFF5F4FA)))))
+        LazyColumn(Modifier.fillMaxSize().padding(horizontal=20.dp),contentPadding=PaddingValues(top=24.dp,bottom=28.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
         item {
             Row(verticalAlignment=Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -347,7 +357,7 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
             }
         }
         item {
-            last?.let { FeaturedTrack(it,playing,dark,onOpenSong) } ?: Card(shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=surface)) {
+            last?.let { FeaturedTrack(it,playing,dark,accent,onOpenSong) } ?: Card(shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=surface)) {
                 Column(Modifier.fillMaxWidth().padding(24.dp),horizontalAlignment=Alignment.Start) {
                     Icon(Icons.Default.MusicNote,contentDescription=null,tint=Purple,modifier=Modifier.size(42.dp))
                     Text(tr("Your music awaits"),color=fg,fontSize=20.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp))
@@ -368,17 +378,18 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
         items(files.take(12),key={it.uri.toString()}) { song -> SongRow(song,dark,fg,muted,onClick={onOpenSong(song)}) }
         item { OutlinedButton(onClick=onRefresh,modifier=Modifier.fillMaxWidth()) { Icon(Icons.Default.Refresh,null);Spacer(Modifier.width(6.dp));Text(tr("Rescan music")) } }
     }
+    }
 }
 
 @Composable
-private fun FeaturedTrack(file:MediaFile,playing:Boolean,dark:Boolean,onOpen:(MediaFile)->Unit) {
+private fun FeaturedTrack(file:MediaFile,playing:Boolean,dark:Boolean,accent:Color,onOpen:(MediaFile)->Unit) {
     val artwork by rememberArtwork(file.uri)
     val discRotation=rememberInfiniteTransition(label="featured disc").animateFloat(initialValue=0f,targetValue=360f,animationSpec=infiniteRepeatable(tween(12000,easing=androidx.compose.animation.core.LinearEasing)),label="rotation").value
     Box(Modifier.fillMaxWidth().height(300.dp).clip(RoundedCornerShape(30.dp)).background(Brush.linearGradient(listOf(Color(0xFF2E244A),Color(0xFF141521),Color(0xFF11121A)))).clickable{onOpen(file)}) {
         artwork?.let{Image(it.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)}
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xE9090A12),Color(0xFF090A12))))) {}
         Column(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.Bottom) {
-            Text(if(playing)"NOW PLAYING" else "LAST PLAYED",color=Purple,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=2.sp)
+            Text(if(playing)"NOW PLAYING" else "LAST PLAYED",color=accent,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=2.sp)
             Text(file.displayTitle,color=Color.White,fontSize=23.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
             Text(file.displayArtist,color=Color.White.copy(alpha=.75f),maxLines=1)
             Box(Modifier.padding(top=12.dp).size(68.dp).graphicsLayer{rotationZ=if(playing)discRotation else 0f}.clip(CircleShape).background(Brush.radialGradient(listOf(Color(0xFFAAAAB2),Color(0xFF30313A),Color(0xFF090A12)))).border(1.dp,Color.White.copy(alpha=.3f),CircleShape),contentAlignment=Alignment.Center) {
@@ -435,7 +446,7 @@ private fun SongRow(file:MediaFile,dark:Boolean,fg:Color,muted:Color,onClick:()-
 }
 
 @Composable
-private fun MiniPlayer(file:MediaFile,playing:Boolean,dark:Boolean,controller:MediaController?,onClick:()->Unit,onToggle:()->Unit) {
+private fun MiniPlayer(file:MediaFile,playing:Boolean,dark:Boolean,controller:MediaController?,accent:Color,onClick:()->Unit,onToggle:()->Unit) {
     val art by rememberArtwork(file.uri)
     var pos by remember { mutableLongStateOf(0L) }
     var dur by remember { mutableLongStateOf(0L) }
@@ -446,12 +457,13 @@ private fun MiniPlayer(file:MediaFile,playing:Boolean,dark:Boolean,controller:Me
             kotlinx.coroutines.delay(if (playing) 500L else 1000L)
         }
     }
-    val accent = MaterialTheme.colorScheme.primary
     Column(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=5.dp).clip(RoundedCornerShape(17.dp)).background(if(dark)Color(0xFF242330)else Color(0xFFF0EDFA))) {
       Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=10.dp,vertical=7.dp),verticalAlignment=Alignment.CenterVertically) {
         Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Purple),contentAlignment=Alignment.Center) { if(art!=null)Image(art!!.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)else Icon(Icons.Default.MusicNote,null,tint=Color.White) }
         Column(Modifier.weight(1f).padding(horizontal=10.dp)) { Text(file.displayTitle,color=if(dark)Color.White else Color(0xFF20202A),fontWeight=FontWeight.SemiBold,maxLines=1);Text(file.displayArtist,color=Subtle,fontSize=11.sp,maxLines=1) }
+        IconButton(onClick={controller?.seekToPreviousMediaItem()}) { Icon(Icons.Default.SkipPrevious,null,tint=accent) }
         IconButton(onClick=onToggle) { Icon(if(playing)Icons.Default.Pause else Icons.Default.PlayArrow,null,tint=accent) }
+        IconButton(onClick={controller?.seekToNextMediaItem()}) { Icon(Icons.Default.SkipNext,null,tint=accent) }
       }
       Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(bottom=6.dp)) {
         Slider(value=if(dur>0L)pos.toFloat().coerceIn(0f,dur.toFloat())else 0f,onValueChange={v->if(dur>0L)controller?.seekTo(v.toLong())},valueRange=0f..(dur.coerceAtLeast(1L).toFloat()),modifier=Modifier.fillMaxWidth().height(18.dp),colors=SliderDefaults.colors(thumbColor=accent,activeTrackColor=accent,inactiveTrackColor=if(dark)Color.White.copy(alpha=0.15f)else Color.Black.copy(alpha=0.10f)))
