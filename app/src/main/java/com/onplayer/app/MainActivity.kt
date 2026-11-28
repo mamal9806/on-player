@@ -254,7 +254,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
                 bottomBar={
                     Column {
                         val miniTrack = current ?: lastPlayed
-                        if (miniTrack != null) MiniPlayer(miniTrack, playing, dark, controller, accent, onClick={ vm.open(miniTrack); playerOpen=true }, onToggle={ if (controller?.isPlaying==true) controller.pause() else controller?.play() })
+                        if (tab != Tab.Home && miniTrack != null) MiniPlayer(miniTrack, playing, dark, controller, accent, onClick={ vm.open(miniTrack); playerOpen=true }, onToggle={ if (controller?.isPlaying==true) controller.pause() else controller?.play() })
                         Row(
                             Modifier.fillMaxWidth().padding(horizontal=12.dp, vertical=7.dp)
                                 .clip(RoundedCornerShape(28.dp))
@@ -295,7 +295,7 @@ fun OnPlayerApp(vm: OnPlayerViewModel = viewModel()) {
             ) { padding ->
                 Box(Modifier.fillMaxSize().padding(padding)) {
                     when(tab) {
-                        Tab.Home -> HomeTab(files, lastPlayed, playing, scanning, scanError, dark, foreground, muted, surface, accent, onRefresh={vm.scan()}, onPick={audioPicker.launch(arrayOf("audio/*"))}, onOpenSong={vm.open(it);playerOpen=true}, onLibrary={tab=Tab.Library})
+                        Tab.Home -> HomeTab(files, lastPlayed, playing, scanning, scanError, dark, foreground, muted, surface, accent, controller, onRefresh={vm.scan()}, onPick={audioPicker.launch(arrayOf("audio/*"))}, onOpenSong={vm.open(it);playerOpen=true}, onLibrary={tab=Tab.Library})
                         Tab.Library -> SongListTab(tr("Your library"),files,scanning,scanError,dark,foreground,muted,onRefresh={vm.scan()},onOpenSong={vm.open(it);playerOpen=true},onPick={audioPicker.launch(arrayOf("audio/*"))})
                         Tab.Playlists -> PlaylistsTab(
                             playlists = playlists,
@@ -336,7 +336,7 @@ private fun rememberRootController(): MediaController? {
 }
 
 @Composable
-private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loading:Boolean,error:String?,dark:Boolean,fg:Color,muted:Color,surface:Color,accent:Color,onRefresh:()->Unit,onPick:()->Unit,onOpenSong:(MediaFile)->Unit,onLibrary:()->Unit) {
+private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loading:Boolean,error:String?,dark:Boolean,fg:Color,muted:Color,surface:Color,accent:Color,controller:MediaController?,onRefresh:()->Unit,onPick:()->Unit,onOpenSong:(MediaFile)->Unit,onLibrary:()->Unit) {
     val homeArtwork by rememberArtworkOrNull(last?.uri)
     Box(Modifier.fillMaxSize()) {
         homeArtwork?.let { art ->
@@ -358,7 +358,7 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
             }
         }
         item {
-            last?.let { FeaturedTrack(it,playing,dark,accent,onOpenSong) } ?: Card(shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=surface)) {
+            last?.let { FeaturedTrack(it,playing,dark,accent,controller,onOpenSong) } ?: Card(shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=surface)) {
                 Column(Modifier.fillMaxWidth().padding(24.dp),horizontalAlignment=Alignment.Start) {
                     Icon(Icons.Default.MusicNote,contentDescription=null,tint=Purple,modifier=Modifier.size(42.dp))
                     Text(tr("Your music awaits"),color=fg,fontSize=20.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=10.dp))
@@ -383,19 +383,25 @@ private fun HomeTab(files:List<MediaFile>,last:MediaFile?,playing:Boolean,loadin
 }
 
 @Composable
-private fun FeaturedTrack(file:MediaFile,playing:Boolean,dark:Boolean,accent:Color,onOpen:(MediaFile)->Unit) {
+private fun FeaturedTrack(file:MediaFile,playing:Boolean,dark:Boolean,accent:Color,controller:MediaController?,onOpen:(MediaFile)->Unit) {
     val artwork by rememberArtwork(file.uri)
     val discRotation=rememberInfiniteTransition(label="featured disc").animateFloat(initialValue=0f,targetValue=360f,animationSpec=infiniteRepeatable(tween(12000,easing=androidx.compose.animation.core.LinearEasing)),label="rotation").value
-    Box(Modifier.fillMaxWidth().height(300.dp).clip(RoundedCornerShape(30.dp)).background(Brush.linearGradient(listOf(Color(0xFF2E244A),Color(0xFF141521),Color(0xFF11121A)))).clickable{onOpen(file)}) {
+    var pos by remember { mutableLongStateOf(0L) }
+    var dur by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(controller,playing) { while(true) { pos=controller?.currentPosition?.coerceAtLeast(0L)?:0L; dur=controller?.duration?.takeIf{it>0L}?:0L; kotlinx.coroutines.delay(if(playing)500L else 1000L) } }
+    Box(Modifier.fillMaxWidth().height(390.dp).clip(RoundedCornerShape(30.dp)).background(Brush.linearGradient(listOf(accent.copy(alpha=0.8f),Color(0xFF141521),Color(0xFF11121A))))) {
         artwork?.let{Image(it.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)}
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xE9090A12),Color(0xFF090A12))))) {}
-        Column(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.Bottom) {
+        Column(Modifier.fillMaxSize().padding(18.dp),verticalArrangement=Arrangement.Bottom) {
             Text(if(playing)"NOW PLAYING" else "LAST PLAYED",color=accent,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=2.sp)
             Text(file.displayTitle,color=Color.White,fontSize=23.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
             Text(file.displayArtist,color=Color.White.copy(alpha=.75f),maxLines=1)
-            Box(Modifier.padding(top=12.dp).size(68.dp).graphicsLayer{rotationZ=if(playing)discRotation else 0f}.clip(CircleShape).background(Brush.radialGradient(listOf(Color(0xFFAAAAB2),Color(0xFF30313A),Color(0xFF090A12)))).border(1.dp,Color.White.copy(alpha=.3f),CircleShape),contentAlignment=Alignment.Center) {
-                artwork?.let { Image(it.asImageBitmap(),null,Modifier.size(30.dp).clip(CircleShape),contentScale=ContentScale.Crop) }
-                Box(Modifier.size(5.dp).clip(CircleShape).background(Color(0xFF08090D)))
+            Slider(value=if(dur>0L)pos.toFloat().coerceIn(0f,dur.toFloat())else 0f,onValueChange={v->if(dur>0L)controller?.seekTo(v.toLong())},valueRange=0f..(dur.coerceAtLeast(1L).toFloat()),modifier=Modifier.fillMaxWidth().padding(top=6.dp).height(20.dp),colors=SliderDefaults.colors(thumbColor=accent,activeTrackColor=accent,inactiveTrackColor=Color.White.copy(alpha=.30f)))
+            Row(Modifier.fillMaxWidth().padding(top=2.dp),horizontalArrangement=Arrangement.SpaceBetween) { Text(formatMiniTime(pos),color=Color.White.copy(alpha=.7f),fontSize=10.sp);Text(formatMiniTime(dur),color=Color.White.copy(alpha=.7f),fontSize=10.sp) }
+            Row(Modifier.fillMaxWidth().padding(top=12.dp),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
+                IconButton(onClick={controller?.seekToPreviousMediaItem()}) { Icon(Icons.Default.SkipPrevious,null,tint=Color.White,modifier=Modifier.size(30.dp)) }
+                IconButton(onClick={if(controller?.isPlaying==true)controller.pause() else controller?.play()}) { Icon(if(playing)Icons.Default.Pause else Icons.Default.PlayArrow,null,tint=accent,modifier=Modifier.size(42.dp)) }
+                IconButton(onClick={controller?.seekToNextMediaItem()}) { Icon(Icons.Default.SkipNext,null,tint=Color.White,modifier=Modifier.size(30.dp)) }
             }
         }
     }
